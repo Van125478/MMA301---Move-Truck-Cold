@@ -19,12 +19,18 @@ export const radius = {
 export type Palette = {
   background: string;
   surface: string;
+  field: string;
   ink: string;
   muted: string;
+  hint: string;
   line: string;
+  brand: string;
   primary: string;
   onPrimary: string;
+  onPrimaryMuted: string;
   primaryPressed: string;
+  badge: string;
+  badgeInk: string;
   danger: string;
   focus: string;
   shadow: string;
@@ -33,12 +39,18 @@ export type Palette = {
 const light: Palette = {
   background: "#F8FAFC",
   surface: "#FFFFFF",
-  ink: "#1E293B",
+  field: "#F8FAFC",
+  ink: "#0F172A",
   muted: "#475569",
+  hint: "#94A3B8",
   line: "#E2E8F0",
+  brand: "#1E3A8A",
   primary: "#1E3A8A",
   onPrimary: "#FFFFFF",
+  onPrimaryMuted: "#DBEAFE",
   primaryPressed: "#172554",
+  badge: "#E8EEF9",
+  badgeInk: "#1E3A8A",
   danger: "#B91C1C",
   focus: "#1E3A8A",
   shadow: "#0F172A",
@@ -47,12 +59,18 @@ const light: Palette = {
 const dark: Palette = {
   background: "#0B1220",
   surface: "#111827",
+  field: "#0F172A",
   ink: "#F8FAFC",
   muted: "#CBD5E1",
+  hint: "#94A3B8",
   line: "#334155",
+  brand: "#172554",
   primary: "#2563EB",
   onPrimary: "#FFFFFF",
+  onPrimaryMuted: "#DBEAFE",
   primaryPressed: "#1D4ED8",
+  badge: "#172554",
+  badgeInk: "#DBEAFE",
   danger: "#FCA5A5",
   focus: "#93C5FD",
   shadow: "#000000",
@@ -70,4 +88,13 @@ export const type = {
 export function useTheme() {
   const scheme = useColorScheme() === "dark" ? "dark" : "light";
   return { scheme, colors: scheme === "dark" ? dark : light };
+}
+
+export function panelChrome(colors: Palette) {
+  return {
+    backgroundColor: colors.surface,
+    borderColor: colors.line,
+    borderWidth: 1,
+    borderRadius: radius.card,
+  } as const;
 }

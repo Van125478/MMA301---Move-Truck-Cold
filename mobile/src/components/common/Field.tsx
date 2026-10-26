@@ -51,7 +51,7 @@ export function Field({
           styles.shell,
           {
             borderColor: error ? colors.danger : focused ? colors.focus : colors.line,
-            backgroundColor: colors.surface,
+            backgroundColor: colors.field,
           },
         ]}
       >
@@ -60,7 +60,7 @@ export function Field({
           value={value}
           onChangeText={onChangeText}
           placeholder={placeholder}
-          placeholderTextColor={colors.muted}
+          placeholderTextColor={colors.hint}
           secureTextEntry={secureTextEntry}
           keyboardType={keyboardType}
           autoCapitalize="none"
@@ -101,8 +101,8 @@ const styles = StyleSheet.create({
   block: { marginTop: space.lg },
   label: { fontFamily: "Inter_600SemiBold", fontSize: 14, lineHeight: 20, marginBottom: space.sm },
   shell: {
-    minHeight: 48,
-    borderWidth: 2,
+    minHeight: 52,
+    borderWidth: 1,
     borderRadius: radius.control,
     flexDirection: "row",
     alignItems: "center",

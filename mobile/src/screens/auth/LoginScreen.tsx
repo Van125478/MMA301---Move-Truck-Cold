@@ -13,12 +13,12 @@ import {
   useWindowDimensions,
   View,
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Wordmark } from "../../components/brand/Wordmark";
 import { Field } from "../../components/common/Field";
 import { FieldError } from "../../components/common/FieldError";
 import { PrimaryButton } from "../../components/common/PrimaryButton";
-import { radius, space, type as textType, useTheme } from "../../constants/theme";
+import { space, type as textType, useTheme } from "../../constants/theme";
 import { useAuth } from "../../features/auth/AuthProvider";
 import type { RootStackParamList } from "../../navigation/types";
 import { ApiError } from "../../services/api/client";
@@ -26,7 +26,8 @@ import { clearRememberedId, readRememberedId, writeRememberedId } from "../../se
 
 export function LoginScreen() {
   const { colors } = useTheme();
-  const { width } = useWindowDimensions();
+  const insets = useSafeAreaInsets();
+  const { height } = useWindowDimensions();
   const { login } = useAuth();
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const identifierRef = useRef<ComponentRef<typeof TextInput>>(null);
@@ -39,8 +40,6 @@ export function LoginScreen() {
   const [identifierError, setIdentifierError] = useState<string | null>(null);
   const [passwordError, setPasswordError] = useState<string | null>(null);
   const [formError, setFormError] = useState<string | null>(null);
-  const gutter = width >= 768 ? space.xxl : space.lg;
-  const cardWidth = Math.min(width - gutter * 2, 440);
 
   useEffect(() => {
     let active = true;
@@ -88,119 +87,115 @@ export function LoginScreen() {
   }
 
   return (
-    <SafeAreaView style={[styles.safe, { backgroundColor: colors.background }]}>
-      <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === "ios" ? "padding" : undefined}>
+    <View style={[styles.safe, { backgroundColor: colors.brand }]}>
+      <View
+        style={[
+          styles.band,
+          { minHeight: Math.max(220, height * 0.32), paddingTop: insets.top + space.lg, paddingBottom: 48 },
+        ]}
+      >
+        <Wordmark tone="onPrimary" />
+        <Text style={[styles.tagline, { color: colors.onPrimaryMuted }]}>Vận chuyển hàng lạnh</Text>
+      </View>
+      <KeyboardAvoidingView
+        style={[styles.sheet, { backgroundColor: colors.surface }]}
+        behavior={Platform.OS === "ios" ? "padding" : undefined}
+      >
         <ScrollView
           keyboardShouldPersistTaps="handled"
-          contentContainerStyle={[styles.scroll, { paddingHorizontal: gutter, paddingVertical: space.xxl }]}
+          contentContainerStyle={[styles.scroll, { paddingBottom: Math.max(insets.bottom, space.xl) }]}
         >
-          <Wordmark />
-          <View
-            style={[
-              styles.card,
-              {
-                width: cardWidth,
-                backgroundColor: colors.surface,
-                shadowColor: colors.shadow,
-              },
-            ]}
-          >
-            <Text accessibilityRole="header" maxFontSizeMultiplier={1.6} style={[styles.title, { color: colors.ink }]}>
-              Chào mừng trở lại
-            </Text>
-            <Text style={[styles.subtitle, { color: colors.muted }]}>Đăng nhập để tiếp tục với tài khoản của bạn.</Text>
-            {formError ? (
-              <View accessibilityRole="alert" style={styles.alert}>
-                <FieldError message={formError} />
+          <View style={styles.form}>
+              <Text accessibilityRole="header" maxFontSizeMultiplier={1.6} style={[styles.title, { color: colors.ink }]}>
+                Chào mừng trở lại
+              </Text>
+              <Text style={[styles.subtitle, { color: colors.muted }]}>Đăng nhập để tiếp tục.</Text>
+              {formError ? (
+                <View accessibilityRole="alert" style={styles.alert}>
+                  <FieldError message={formError} />
+                </View>
+              ) : null}
+              <Field
+                label="Email hoặc tên đăng nhập"
+                value={identifier}
+                onChangeText={setIdentifier}
+                error={identifierError}
+                inputRef={identifierRef}
+                placeholder="email@congty.com"
+                keyboardType="email-address"
+                autoComplete="username"
+                textContentType="username"
+                returnKeyType="next"
+                onSubmitEditing={() => passwordRef.current?.focus()}
+                maxLength={254}
+              />
+              <Field
+                label="Mật khẩu"
+                value={password}
+                onChangeText={setPassword}
+                error={passwordError}
+                inputRef={passwordRef}
+                placeholder="Nhập mật khẩu"
+                secureTextEntry={secure}
+                secureVisible={!secure}
+                onToggleSecure={() => setSecure((value) => !value)}
+                autoComplete="current-password"
+                textContentType="password"
+                returnKeyType="go"
+                onSubmitEditing={() => void submit()}
+                maxLength={72}
+              />
+              <View style={styles.row}>
+                <Pressable
+                  accessibilityRole="checkbox"
+                  accessibilityState={{ checked: remember }}
+                  accessibilityLabel="Ghi nhớ đăng nhập"
+                  onPress={() => setRemember((value) => !value)}
+                  style={styles.remember}
+                >
+                  <MaterialCommunityIcons
+                    name={remember ? "checkbox-marked-outline" : "checkbox-blank-outline"}
+                    size={22}
+                    color={remember ? colors.primary : colors.muted}
+                  />
+                  <Text style={[styles.rememberText, { color: colors.ink }]}>Ghi nhớ đăng nhập</Text>
+                </Pressable>
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel="Quên mật khẩu"
+                  onPress={() => openUnavailable("forgot")}
+                  style={styles.linkHit}
+                >
+                  <Text style={[styles.link, { color: colors.primary }]}>Quên mật khẩu?</Text>
+                </Pressable>
               </View>
-            ) : null}
-            <Field
-              label="Email hoặc tên đăng nhập"
-              value={identifier}
-              onChangeText={setIdentifier}
-              error={identifierError}
-              inputRef={identifierRef}
-              placeholder="shipper.demo@coldi.local"
-              keyboardType="email-address"
-              autoComplete="username"
-              textContentType="username"
-              returnKeyType="next"
-              onSubmitEditing={() => passwordRef.current?.focus()}
-              maxLength={254}
-            />
-            <Field
-              label="Mật khẩu"
-              value={password}
-              onChangeText={setPassword}
-              error={passwordError}
-              inputRef={passwordRef}
-              placeholder="Nhập mật khẩu"
-              secureTextEntry={secure}
-              secureVisible={!secure}
-              onToggleSecure={() => setSecure((value) => !value)}
-              autoComplete="current-password"
-              textContentType="password"
-              returnKeyType="go"
-              onSubmitEditing={() => void submit()}
-              maxLength={72}
-            />
-            <View style={styles.row}>
-              <Pressable
-                accessibilityRole="checkbox"
-                accessibilityState={{ checked: remember }}
-                accessibilityLabel="Ghi nhớ đăng nhập"
-                onPress={() => setRemember((value) => !value)}
-                style={styles.remember}
-              >
-                <MaterialCommunityIcons
-                  name={remember ? "checkbox-marked-outline" : "checkbox-blank-outline"}
-                  size={22}
-                  color={remember ? colors.primary : colors.muted}
-                />
-                <Text style={[styles.rememberText, { color: colors.ink }]}>Ghi nhớ đăng nhập</Text>
-              </Pressable>
-              <Pressable
-                accessibilityRole="button"
-                accessibilityLabel="Quên mật khẩu"
-                onPress={() => openUnavailable("forgot")}
-                style={styles.linkHit}
-              >
-                <Text style={[styles.link, { color: colors.primary }]}>Quên mật khẩu?</Text>
-              </Pressable>
-            </View>
-            <PrimaryButton label="Đăng nhập" pendingLabel="Đang đăng nhập…" onPress={() => void submit()} pending={pending} />
-            <View style={styles.signup}>
-              <Text style={[styles.caption, { color: colors.muted }]}>Chưa có tài khoản?</Text>
-              <Pressable
-                accessibilityRole="button"
-                accessibilityLabel="Đăng ký"
-                onPress={() => openUnavailable("register")}
-                style={styles.linkHit}
-              >
-                <Text style={[styles.link, { color: colors.primary }]}>Đăng ký</Text>
-              </Pressable>
-            </View>
+              <PrimaryButton label="Đăng nhập" pendingLabel="Đang đăng nhập…" onPress={() => void submit()} pending={pending} />
+              <View style={styles.signup}>
+                <Text style={[styles.caption, { color: colors.muted }]}>Chưa có tài khoản?</Text>
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel="Đăng ký"
+                  onPress={() => openUnavailable("register")}
+                  style={styles.linkHit}
+                >
+                  <Text style={[styles.link, { color: colors.primary }]}>Đăng ký</Text>
+                </Pressable>
+              </View>
+              <Text style={[styles.footer, { color: colors.hint }]}>© 2026 Coldi</Text>
           </View>
-          <Text style={[styles.footer, { color: colors.muted }]}>© 2026 Coldi Freight</Text>
         </ScrollView>
       </KeyboardAvoidingView>
-    </SafeAreaView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   safe: { flex: 1 },
-  flex: { flex: 1 },
-  scroll: { flexGrow: 1, alignItems: "center" },
-  card: {
-    marginTop: space.xxl,
-    borderRadius: radius.card,
-    padding: space.xl,
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.08,
-    shadowRadius: 24,
-    elevation: 2,
-  },
+  band: { alignItems: "center", justifyContent: "flex-end" },
+  sheet: { flex: 1, marginTop: -28, borderTopLeftRadius: 28, borderTopRightRadius: 28, overflow: "hidden" },
+  scroll: { flexGrow: 1, paddingHorizontal: space.xl, paddingTop: space.xl },
+  form: { width: "100%", maxWidth: 440, alignSelf: "center" },
+  tagline: { marginTop: space.md, fontFamily: "Inter_500Medium", fontSize: 15, lineHeight: 22 },
   title: { ...textType.display },
   subtitle: { ...textType.body, marginTop: space.sm },
   alert: { marginTop: space.lg },
@@ -216,7 +211,7 @@ const styles = StyleSheet.create({
   rememberText: { fontFamily: "Inter_400Regular", fontSize: 15, lineHeight: 22 },
   linkHit: { minHeight: 48, justifyContent: "center", paddingHorizontal: space.xs },
   link: { fontFamily: "Inter_600SemiBold", fontSize: 15, lineHeight: 22 },
-  signup: { marginTop: space.lg, minHeight: 48, flexDirection: "row", justifyContent: "center", alignItems: "center", gap: space.sm, flexWrap: "wrap" },
+  signup: { marginTop: space.md, minHeight: 48, flexDirection: "row", justifyContent: "center", alignItems: "center", gap: space.sm, flexWrap: "wrap" },
   caption: { fontFamily: "Inter_400Regular", fontSize: 15, lineHeight: 22 },
-  footer: { marginTop: space.xxl, fontFamily: "Inter_500Medium", fontSize: 14, lineHeight: 20 },
+  footer: { marginTop: space.lg, textAlign: "center", fontFamily: "Inter_500Medium", fontSize: 13, lineHeight: 18 },
 });

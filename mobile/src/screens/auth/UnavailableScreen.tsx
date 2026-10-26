@@ -1,9 +1,10 @@
 import { useNavigation, useRoute, type RouteProp } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
-import { Pressable, StyleSheet, Text, useWindowDimensions, View } from "react-native";
+import { StyleSheet, Text, useWindowDimensions, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { Wordmark } from "../../components/brand/Wordmark";
-import { radius, space, type as textType, useTheme } from "../../constants/theme";
+import { BrandHeader } from "../../components/brand/Wordmark";
+import { PrimaryButton } from "../../components/common/PrimaryButton";
+import { panelChrome, space, type as textType, useTheme } from "../../constants/theme";
 import type { RootStackParamList } from "../../navigation/types";
 
 const copy = {
@@ -30,20 +31,15 @@ export function UnavailableScreen() {
   return (
     <SafeAreaView style={[styles.safe, { backgroundColor: colors.background }]}>
       <View style={[styles.page, { paddingHorizontal: gutter }]}>
-        <Wordmark />
-        <View style={[styles.card, { width: cardWidth, backgroundColor: colors.surface, shadowColor: colors.shadow }]}>
-          <Text accessibilityRole="header" style={[styles.title, { color: colors.ink }]}>
-            {page.title}
-          </Text>
-          <Text style={[styles.body, { color: colors.muted }]}>{page.body}</Text>
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel="Quay lại đăng nhập"
-            onPress={() => navigation.goBack()}
-            style={({ pressed }) => [styles.back, { backgroundColor: pressed ? colors.primaryPressed : colors.primary }]}
-          >
-            <Text style={[styles.backLabel, { color: colors.onPrimary }]}>Quay lại đăng nhập</Text>
-          </Pressable>
+        <View style={{ width: cardWidth }}>
+          <BrandHeader />
+          <View style={[styles.card, panelChrome(colors)]}>
+            <Text accessibilityRole="header" style={[styles.title, { color: colors.ink }]}>
+              {page.title}
+            </Text>
+            <Text style={[styles.body, { color: colors.muted }]}>{page.body}</Text>
+            <PrimaryButton label="Quay lại đăng nhập" onPress={() => navigation.goBack()} />
+          </View>
         </View>
       </View>
     </SafeAreaView>
@@ -52,18 +48,8 @@ export function UnavailableScreen() {
 
 const styles = StyleSheet.create({
   safe: { flex: 1 },
-  page: { flex: 1, alignItems: "center", paddingVertical: space.xxl },
-  card: {
-    marginTop: space.xxl,
-    borderRadius: radius.card,
-    padding: space.xl,
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.08,
-    shadowRadius: 24,
-    elevation: 2,
-  },
+  page: { flex: 1, alignItems: "center", paddingTop: space.lg },
+  card: { marginTop: space.xl, padding: space.xl },
   title: { ...textType.title },
   body: { ...textType.body, marginTop: space.md },
-  back: { minHeight: 48, borderRadius: radius.control, alignItems: "center", justifyContent: "center", marginTop: space.xl },
-  backLabel: { fontFamily: "Inter_600SemiBold", fontSize: 16, lineHeight: 24 },
 });

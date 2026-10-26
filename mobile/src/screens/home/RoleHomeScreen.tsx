@@ -1,8 +1,8 @@
 import { useState } from "react";
 import { Pressable, StyleSheet, Text, useWindowDimensions, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { Wordmark } from "../../components/brand/Wordmark";
-import { radius, space, type as textType, useTheme } from "../../constants/theme";
+import { BrandHeader } from "../../components/brand/Wordmark";
+import { panelChrome, space, type as textType, useTheme } from "../../constants/theme";
 import { useAuth } from "../../features/auth/AuthProvider";
 import type { UserRole } from "../../types/auth";
 
@@ -40,15 +40,19 @@ export function RoleHomeScreen() {
   return (
     <SafeAreaView style={[styles.safe, { backgroundColor: colors.background }]}>
       <View style={[styles.page, { paddingHorizontal: gutter }]}>
-        <Wordmark />
-        <View style={[styles.card, { width: cardWidth, backgroundColor: colors.surface, shadowColor: colors.shadow }]}>
-          <Text style={[styles.kicker, { color: colors.muted }]}>Đã đăng nhập</Text>
-          <Text accessibilityRole="header" maxFontSizeMultiplier={1.4} style={[styles.title, { color: colors.ink }]}>
-            {role.label}
-          </Text>
-          <Text style={[styles.name, { color: colors.ink }]}>{name}</Text>
-          <Text style={[styles.roleCode, { color: colors.ink }]}>Máy chủ trả vai: {user.role}</Text>
-          <Text style={[styles.work, { color: colors.muted }]}>{role.work}</Text>
+        <View style={[styles.column, { width: cardWidth }]}>
+          <BrandHeader />
+          <View style={[styles.card, panelChrome(colors)]}>
+            <Text style={[styles.kicker, { color: colors.primary }]}>Đã đăng nhập</Text>
+            <Text accessibilityRole="header" maxFontSizeMultiplier={1.4} style={[styles.title, { color: colors.ink }]}>
+              {role.label}
+            </Text>
+            <View style={[styles.badge, { backgroundColor: colors.badge }]}>
+              <Text style={[styles.badgeText, { color: colors.badgeInk }]}>Máy chủ trả vai: {user.role}</Text>
+            </View>
+            <Text style={[styles.name, { color: colors.ink }]}>{name}</Text>
+            <Text style={[styles.work, { color: colors.muted }]}>{role.work}</Text>
+          </View>
           <Pressable
             accessibilityRole="button"
             accessibilityLabel="Đăng xuất"
@@ -58,7 +62,14 @@ export function RoleHomeScreen() {
               setLeaving(true);
               void logout().finally(() => setLeaving(false));
             }}
-            style={({ pressed }) => [styles.logout, { borderColor: colors.line, backgroundColor: pressed ? colors.background : colors.surface, opacity: leaving ? 0.55 : 1 }]}
+            style={({ pressed }) => [
+              styles.logout,
+              {
+                borderColor: colors.line,
+                backgroundColor: pressed ? colors.field : colors.surface,
+                opacity: leaving ? 0.55 : 1,
+              },
+            ]}
           >
             <Text style={[styles.logoutLabel, { color: colors.ink }]}>{leaving ? "Đang đăng xuất…" : "Đăng xuất"}</Text>
           </Pressable>
@@ -70,25 +81,19 @@ export function RoleHomeScreen() {
 
 const styles = StyleSheet.create({
   safe: { flex: 1 },
-  page: { flex: 1, alignItems: "center", paddingVertical: space.xxl },
-  card: {
-    marginTop: space.xxl,
-    borderRadius: radius.card,
-    padding: space.xl,
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.08,
-    shadowRadius: 24,
-    elevation: 2,
-  },
-  kicker: { fontFamily: "Inter_600SemiBold", fontSize: 14, lineHeight: 20 },
+  page: { flex: 1, alignItems: "center", paddingTop: space.lg, paddingBottom: space.lg },
+  column: { flex: 1 },
+  card: { marginTop: space.xl, padding: space.xl },
+  kicker: { fontFamily: "Inter_600SemiBold", fontSize: 13, lineHeight: 18, letterSpacing: 0.6 },
   title: { ...textType.display, marginTop: space.sm },
-  name: { ...textType.body, marginTop: space.md },
-  roleCode: { fontFamily: "Inter_600SemiBold", fontSize: 16, lineHeight: 24, marginTop: space.sm },
+  badge: { alignSelf: "flex-start", marginTop: space.lg, borderRadius: 999, paddingHorizontal: space.md, paddingVertical: space.sm },
+  badgeText: { fontFamily: "Inter_600SemiBold", fontSize: 13, lineHeight: 18 },
+  name: { ...textType.body, marginTop: space.lg },
   work: { ...textType.body, marginTop: space.sm },
   logout: {
-    minHeight: 48,
-    borderWidth: 2,
-    borderRadius: radius.control,
+    minHeight: 52,
+    borderWidth: 1,
+    borderRadius: 12,
     alignItems: "center",
     justifyContent: "center",
     marginTop: space.xl,

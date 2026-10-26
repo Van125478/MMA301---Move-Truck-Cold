@@ -46,7 +46,7 @@ Expo có thể cảnh báo Node 20. App vẫn mở được. Nếu lệnh dừng
 
 ## 3. Tài khoản
 
-Lấy mật khẩu trong `server\.env`. Mỗi biến `DEMO_*_PASSWORD` đi với email cùng hàng.
+Lấy mật khẩu trong `server\.env`. Mỗi biến `DEMO_*_PASSWORD` đi với email cùng hàng. Gõ đúng giá trị sau dấu `=`. Đừng gõ tên biến, ví dụ đừng gõ chữ `DEMO_SHIPPER_PASSWORD` vào ô mật khẩu.
 
 | Email | Biến mật khẩu | Màn sau khi vào |
 | --- | --- | --- |
@@ -82,7 +82,36 @@ Ghi nhớ đăng nhập không lưu mật khẩu:
 1. Tick **Ghi nhớ đăng nhập**, đăng nhập chủ hàng, rồi đăng xuất.
 2. Ô email còn `shipper.demo@coldi.local`. Ô mật khẩu trống.
 
-## 5. Điện thoại, nếu cần xem trên máy thật
+## 5. Máy ảo Android Studio
+
+Bật máy ảo trong Device Manager trước. Máy ảo trong ảnh là Medium Phone, Android 17.
+
+Trong `mobile\.env`:
+
+```text
+EXPO_PUBLIC_API_ORIGIN=http://10.0.2.2:4000
+```
+
+`10.0.2.2` là máy tính khi nhìn từ máy ảo. `127.0.0.1` trong máy ảo là chính máy ảo, nên API sẽ không tới.
+
+API trên máy tính vẫn chạy ở cổng `4000`. Rồi:
+
+```powershell
+cd C:\Coldi-Development\mobile
+npx expo start --android
+```
+
+Expo mở Coldi trên máy ảo đang chạy. Các bước bấm ở mục 4 vẫn giống vậy. Thay vì tải lại trang, đóng hẳn app rồi mở lại để kiểm tra phiên.
+
+Android 17 chặn Expo Go gọi sang máy tính cho đến khi app được phép dùng mạng nội bộ. Expo Go hiện dòng `Local network access needed`. Bấm dòng đó và cho phép. Nếu dòng đó không còn, chạy một lần:
+
+```powershell
+adb shell pm grant host.exp.exponent android.permission.ACCESS_LOCAL_NETWORK
+```
+
+Rồi đóng Coldi và mở lại từ mục Coldi trong Expo Go. Quyền này đã được cấp trên máy ảo Medium Phone của máy này.
+
+## 6. Điện thoại thật, nếu cần
 
 Cùng mạng Wi-Fi với máy tính. Trong `mobile\.env`:
 
@@ -94,8 +123,9 @@ Xem IPv4 bằng `ipconfig`. Tắt Expo rồi chạy lại `npx expo start`. Qué
 
 Trên điện thoại không mở bằng trình duyệt của máy tính. Các bước bấm ở mục 4 vẫn giống vậy. Tải lại trang đổi thành đóng hẳn app rồi mở lại.
 
-## 6. Chưa tính là đạt
+## 7. Chưa tính là đạt
 
-- Form báo `Không kết nối được máy chủ`: API chưa chạy, hoặc điện thoại đang trỏ `127.0.0.1` của chính điện thoại.
+- Form báo `Không kết nối được máy chủ`: API chưa chạy, máy ảo đang trỏ `127.0.0.1` thay vì `10.0.2.2`, hoặc Expo Go chưa được cấp quyền mạng nội bộ ở mục 5.
+- Câu `Email, tên đăng nhập hoặc mật khẩu không đúng.` trong khi ô mật khẩu còn chữ `DEMO_SHIPPER_PASSWORD`: đó là tên biến. Mở `server\.env` và gõ giá trị.
 - Trình duyệt mở nhầm `localhost` rồi báo nguồn không được phép: đóng tab, mở `http://127.0.0.1:5173`.
 - Vào được mà không có dòng `Máy chủ trả vai:`: đang mở bản app cũ. Tắt Expo và chạy lại.

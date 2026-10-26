@@ -37,7 +37,7 @@ export function PrimaryButton({ label, pendingLabel, onPress, pending = false, d
 
 const styles = StyleSheet.create({
   button: {
-    minHeight: 48,
+    minHeight: 52,
     borderRadius: radius.control,
     alignItems: "center",
     justifyContent: "center",

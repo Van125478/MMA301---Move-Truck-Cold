@@ -1,11 +1,11 @@
 import { useRef, useState, type ComponentRef } from "react";
 import { KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, useWindowDimensions, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { Wordmark } from "../../components/brand/Wordmark";
+import { BrandHeader } from "../../components/brand/Wordmark";
 import { Field } from "../../components/common/Field";
 import { FieldError } from "../../components/common/FieldError";
 import { PrimaryButton } from "../../components/common/PrimaryButton";
-import { radius, space, type as textType, useTheme } from "../../constants/theme";
+import { panelChrome, space, type as textType, useTheme } from "../../constants/theme";
 import { useAuth } from "../../features/auth/AuthProvider";
 import { ApiError } from "../../services/api/client";
 
@@ -47,10 +47,11 @@ export function ChangePasswordScreen() {
       <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === "ios" ? "padding" : undefined}>
         <ScrollView
           keyboardShouldPersistTaps="handled"
-          contentContainerStyle={[styles.scroll, { paddingHorizontal: gutter, paddingVertical: space.xxl }]}
+          contentContainerStyle={[styles.scroll, { paddingHorizontal: gutter, paddingTop: space.lg, paddingBottom: space.lg }]}
         >
-          <Wordmark />
-          <View style={[styles.card, { width: cardWidth, backgroundColor: colors.surface, shadowColor: colors.shadow }]}>
+          <View style={[styles.column, { width: cardWidth }]}>
+          <BrandHeader />
+          <View style={[styles.card, panelChrome(colors)]}>
             <Text accessibilityRole="header" maxFontSizeMultiplier={1.4} style={[styles.title, { color: colors.ink }]}>
               Đổi mật khẩu tạm
             </Text>
@@ -99,6 +100,7 @@ export function ChangePasswordScreen() {
               <Text style={[styles.logoutLabel, { color: colors.primary }]}>Đăng xuất</Text>
             </Pressable>
           </View>
+          </View>
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
@@ -109,15 +111,8 @@ const styles = StyleSheet.create({
   safe: { flex: 1 },
   flex: { flex: 1 },
   scroll: { flexGrow: 1, alignItems: "center" },
-  card: {
-    marginTop: space.xxl,
-    borderRadius: radius.card,
-    padding: space.xl,
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.08,
-    shadowRadius: 24,
-    elevation: 2,
-  },
+  column: { flexGrow: 1 },
+  card: { marginTop: space.xl, padding: space.xl },
   title: { ...textType.display },
   body: { ...textType.body, marginTop: space.sm },
   logout: { minHeight: 48, alignItems: "center", justifyContent: "center", marginTop: space.sm },
