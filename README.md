@@ -4,6 +4,20 @@ Kho này dùng để làm backend và app mobile. Nhánh làm việc là `main`.
 
 Người mới làm đúng thứ tự: lấy mã, nối MongoDB, chạy API, rồi mở app trong `mobile`.
 
+## Hệ thống là gì
+
+Đây là sàn vận tải lạnh. Không có máy tự ghép đơn.
+
+1. Chủ hàng đăng một đơn chở hàng lạnh và ghi cước niêm yết. Đơn ở trạng thái đang tìm xe. Nhóm nhiệt là Lạnh mát, Đông, hoặc Cực lạnh.
+2. Nhà xe tự chọn đơn trên sàn và bấm nhận.
+3. Nhà xe gán một xe đang rảnh và một tài xế của mình. Một xe chỉ giữ một chuyến chưa xong.
+4. Tài xế xác nhận đã lấy hàng, gửi vị trí khi đang chở, rồi xác nhận đã giao.
+5. Xác nhận giao chỉ ghi nhận hàng đã tới. Bước đó không thu tiền và không xuất hóa đơn.
+
+Bốn vai: chủ hàng, nhà xe, tài xế, quản trị. Một tài khoản một vai. Tài xế do nhà xe tạo, không tự vào sàn nhận chuyến.
+
+App mobile hiện đọc danh sách chuyến, xem chi tiết, tìm kiếm, lưu chuyến quan tâm và ghi đánh giá qua `/api/mobile`. Nhà xe thấy đơn đang tìm xe. Chủ hàng chỉ thấy đơn của mình. Đánh giá chỉ gửi được sau khi chuyến đã xác nhận giao.
+
 ## Thư mục
 
 | Thư mục | Việc |

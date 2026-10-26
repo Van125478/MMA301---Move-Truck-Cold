@@ -38,7 +38,7 @@ npm start
 
 ## API để nối sau
 
-Cookie phiên tên `coldi_session`, cùng máy chủ với website.
+Cookie phiên tên `coldi_session`, cùng máy chủ API ở cổng `4000`.
 
 - `GET /api/mobile/shipments?q=&temperature=&sort=priceDesc`
 - `GET /api/mobile/shipments/:id`
