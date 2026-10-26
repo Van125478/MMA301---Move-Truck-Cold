@@ -10,7 +10,6 @@ Người mới làm đúng thứ tự: lấy mã, nối MongoDB, chạy API, r�
 | --- | --- |
 | `server` | API. Đăng nhập, đơn, và `/api/mobile` |
 | `mobile` | App Expo. Màn hình mới để trong `mobile/src` |
-| `web` | Website. Không cần mở nếu bạn chỉ làm app |
 
 ## 1. Lấy mã
 
