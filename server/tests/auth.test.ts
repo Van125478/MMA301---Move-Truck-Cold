@@ -205,6 +205,65 @@ test("a deleted account cannot keep using an old session", async () => {
   });
 });
 
+test("a shipper or carrier can register and receives a session", async () => {
+  await withServer(async (baseUrl) => {
+    const email = "new.shipper.auth-test@coldi.local";
+    const response = await fetch(`${baseUrl}/api/auth/register`, {
+      method: "POST",
+      headers: { "content-type": "application/json", origin: "http://127.0.0.1:5173" },
+      body: JSON.stringify({
+        email,
+        password: "register-password-123",
+        displayName: "Kho mới",
+        role: "SHIPPER",
+        shipperId: "spoof",
+      }),
+    });
+    const body = (await response.json()) as Json;
+    assert.equal(response.status, 400);
+    assert.equal((body.error as Json).code, "invalid_request");
+
+    const created = await fetch(`${baseUrl}/api/auth/register`, {
+      method: "POST",
+      headers: { "content-type": "application/json", origin: "http://127.0.0.1:5173" },
+      body: JSON.stringify({ email, password: "register-password-123", displayName: "Kho mới", role: "SHIPPER" }),
+    });
+    const createdBody = (await created.json()) as Json;
+    const user = createdBody.user as Json;
+    assert.equal(created.status, 201);
+    assert.equal(user.email, email);
+    assert.equal(user.role, "SHIPPER");
+    assert.equal(user.mustChangePassword, false);
+    assert.equal(JSON.stringify(createdBody).includes("register-password-123"), false);
+    assert.equal(JSON.stringify(createdBody).includes("passwordHash"), false);
+    sessionCookie(created);
+
+    const duplicate = await fetch(`${baseUrl}/api/auth/register`, {
+      method: "POST",
+      headers: { "content-type": "application/json", origin: "http://127.0.0.1:5173" },
+      body: JSON.stringify({ email, password: "another-password-123", displayName: "Trùng", role: "CARRIER" }),
+    });
+    const duplicateBody = (await duplicate.json()) as Json;
+    assert.equal(duplicate.status, 409);
+    assert.equal((duplicateBody.error as Json).code, "email_taken");
+
+    const driver = await fetch(`${baseUrl}/api/auth/register`, {
+      method: "POST",
+      headers: { "content-type": "application/json", origin: "http://127.0.0.1:5173" },
+      body: JSON.stringify({
+        email: "new.driver.auth-test@coldi.local",
+        password: "register-password-123",
+        displayName: "Tài xế tự đăng ký",
+        role: "DRIVER",
+      }),
+    });
+    const driverBody = (await driver.json()) as { error: { fields: { role: string } } };
+    assert.equal(driver.status, 400);
+    assert.match(driverBody.error.fields.role, /nhà xe/);
+    assert.equal(await User.countDocuments({ email: "new.driver.auth-test@coldi.local" }), 0);
+  });
+});
+
 test("login from an untrusted origin is rejected", async () => {
   await withServer(async (baseUrl) => {
     const response = await fetch(`${baseUrl}/api/auth/login`, {

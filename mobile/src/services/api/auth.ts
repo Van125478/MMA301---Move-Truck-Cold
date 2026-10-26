@@ -18,18 +18,38 @@ async function currentToken(): Promise<string | null> {
   return readSessionToken();
 }
 
+export type RegisterInput = {
+  email: string;
+  password: string;
+  displayName: string;
+  role: "SHIPPER" | "CARRIER";
+};
+
+async function storeMobileSession(result: { sessionToken: string | null }, failure: string): Promise<void> {
+  if (Platform.OS === "web") return;
+  if (!result.sessionToken) {
+    throw new ApiError(0, "missing_session", failure);
+  }
+  await writeSessionToken(result.sessionToken);
+}
+
+export async function registerAccount(input: RegisterInput): Promise<AuthUser> {
+  const result = await apiRequest<unknown>("/api/auth/register", {
+    method: "POST",
+    body: input,
+  });
+  const user = userFrom(result.data);
+  await storeMobileSession(result, "Máy chủ không trả cookie phiên. App không lưu được tài khoản vừa tạo.");
+  return user;
+}
+
 export async function login(identifier: string, password: string): Promise<AuthUser> {
   const result = await apiRequest<unknown>("/api/auth/login", {
     method: "POST",
     body: { email: identifier, password },
   });
   const user = userFrom(result.data);
-  if (Platform.OS !== "web") {
-    if (!result.sessionToken) {
-      throw new ApiError(0, "missing_session", "Máy chủ không trả cookie phiên. App không lưu được đăng nhập.");
-    }
-    await writeSessionToken(result.sessionToken);
-  }
+  await storeMobileSession(result, "Máy chủ không trả cookie phiên. App không lưu được đăng nhập.");
   return user;
 }
 

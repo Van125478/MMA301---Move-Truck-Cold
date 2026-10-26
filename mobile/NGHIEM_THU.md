@@ -69,7 +69,7 @@ Sau tài khoản chủ hàng, làm thêm bốn bước này:
 1. Nhập đúng email chủ hàng, mật khẩu gõ `sai-mat-khau`, bấm **Đăng nhập**. Phải thấy câu `Email, tên đăng nhập hoặc mật khẩu không đúng.` Ô mật khẩu vẫn trống ý nghĩa là chưa vào được.
 2. Xóa hết hai ô, bấm **Đăng nhập**. Phải thấy `Còn ô chưa nhập.` và dòng đỏ dưới từng ô.
 3. Bấm **Quên mật khẩu?** Phải thấy `Chưa có quên mật khẩu trên máy chủ`. Bấm **Quay lại đăng nhập**.
-4. Bấm **Đăng ký**. Phải thấy `Chưa có đăng ký trên máy chủ`. Bấm **Quay lại đăng nhập**.
+4. Bấm **Đăng ký**. Nhập tên hiển thị, chọn **Chủ hàng**, email chưa có trong hệ thống, mật khẩu từ 8 đến 72 ký tự. Bấm **Tạo tài khoản**. Phải vào màn **Chủ hàng** và thấy `Máy chủ trả vai: SHIPPER`. Đăng xuất, rồi đăng nhập lại bằng email vừa tạo. Tài xế không có lựa chọn tự đăng ký.
 
 Phiên còn sống:
 

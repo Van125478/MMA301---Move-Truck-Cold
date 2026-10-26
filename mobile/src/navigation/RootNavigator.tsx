@@ -5,6 +5,7 @@ import { useTheme } from "../constants/theme";
 import { useAuth } from "../features/auth/AuthProvider";
 import { ChangePasswordScreen } from "../screens/auth/ChangePasswordScreen";
 import { LoginScreen } from "../screens/auth/LoginScreen";
+import { RegisterScreen } from "../screens/auth/RegisterScreen";
 import { UnavailableScreen } from "../screens/auth/UnavailableScreen";
 import { RoleHomeScreen } from "../screens/home/RoleHomeScreen";
 import { SessionGate } from "../screens/SessionGate";
@@ -20,7 +21,7 @@ function linkingFor(signedIn: boolean, mustChange: boolean) {
         ? mustChange
           ? { ChangePassword: "doi-mat-khau" }
           : { Home: "trang-chu" }
-        : { Login: "dang-nhap", Unavailable: "chua-co" },
+        : { Login: "dang-nhap", Register: "dang-ky", Unavailable: "chua-co" },
     },
   };
 }
@@ -53,6 +54,7 @@ export function RootNavigator() {
         {!signedIn ? (
           <>
             <Stack.Screen name="Login" component={LoginScreen} />
+            <Stack.Screen name="Register" component={RegisterScreen} />
             <Stack.Screen name="Unavailable" component={UnavailableScreen} />
           </>
         ) : mustChange ? (

@@ -72,6 +72,7 @@ const eventLabels: Record<ShipmentEventType, string> = {
   ASSIGNED: "Đã phân công xe và tài xế",
   PICKUP_CONFIRMED: "Đã xác nhận lấy hàng",
   DELIVERY_CONFIRMED: "Đã xác nhận giao hàng",
+  CANCELLED: "Đã hủy đơn",
 };
 
 const blankActor = { toString: () => "" };

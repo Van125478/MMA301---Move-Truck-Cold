@@ -1,6 +1,7 @@
 export type RootStackParamList = {
   Login: undefined;
-  Unavailable: { topic: "register" | "forgot" };
+  Register: undefined;
+  Unavailable: { topic: "forgot" };
   ChangePassword: undefined;
   Home: undefined;
 };

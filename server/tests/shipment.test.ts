@@ -233,6 +233,70 @@ test("older shipments without the new fields remain readable", async () => {
   });
 });
 
+test("a shipper cancels only their own published shipment", async () => {
+  await withServer(async (baseUrl) => {
+    const cookie = await login(baseUrl, shipperEmail);
+    const created = await publish(baseUrl, cookie, validBody);
+    const createdBody = (await created.json()) as { shipment: Json };
+    const id = String(createdBody.shipment.id);
+
+    const extra = await fetch(`${baseUrl}/api/shipments/${id}/cancel`, {
+      method: "POST",
+      headers: { "content-type": "application/json", origin: "http://127.0.0.1:5173", cookie },
+      body: JSON.stringify({ reason: "đổi ý" }),
+    });
+    assert.equal(extra.status, 400);
+
+    const cancelled = await fetch(`${baseUrl}/api/shipments/${id}/cancel`, {
+      method: "POST",
+      headers: { "content-type": "application/json", origin: "http://127.0.0.1:5173", cookie },
+      body: JSON.stringify({}),
+    });
+    const cancelledBody = (await cancelled.json()) as { shipment: Json };
+    assert.equal(cancelled.status, 200);
+    assert.equal(cancelledBody.shipment.status, "CANCELLED");
+    assert.equal(cancelledBody.shipment.statusLabel, "Đã hủy");
+
+    const again = await fetch(`${baseUrl}/api/shipments/${id}/cancel`, {
+      method: "POST",
+      headers: { "content-type": "application/json", origin: "http://127.0.0.1:5173", cookie },
+      body: JSON.stringify({}),
+    });
+    assert.equal(again.status, 409);
+
+    const other = await fetch(`${baseUrl}/api/shipments/${id}/cancel`, {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        origin: "http://127.0.0.1:5173",
+        cookie: await login(baseUrl, otherShipperEmail),
+      },
+      body: JSON.stringify({}),
+    });
+    assert.equal(other.status, 403);
+
+    const shipper = await User.findOne({ email: shipperEmail });
+    assert.ok(shipper);
+    const matched = await Shipment.create({
+      shipperId: shipper._id,
+      cargoDescription: "Đơn đã có nhà xe",
+      pickupLocation: "Cần Thơ",
+      deliveryLocation: "Đà Lạt",
+      temperatureGroup: "FROZEN",
+      vehicleRequirement: "Xe đông lạnh",
+      listedPriceVnd: 2000,
+      status: "MATCHED",
+    });
+    const blocked = await fetch(`${baseUrl}/api/shipments/${matched._id.toString()}/cancel`, {
+      method: "POST",
+      headers: { "content-type": "application/json", origin: "http://127.0.0.1:5173", cookie },
+      body: JSON.stringify({}),
+    });
+    assert.equal(blocked.status, 409);
+    assert.equal((await Shipment.findById(matched._id))?.status, "MATCHED");
+  });
+});
+
 test("a carrier sees operational shipment details without notification email", async () => {
   await withServer(async (baseUrl) => {
     const created = await publish(baseUrl, await login(baseUrl, shipperEmail), validBody);

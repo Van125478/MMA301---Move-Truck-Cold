@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { clearSessionCookie, setSessionCookie } from "../auth/cookies.js";
-import { hashPassword, verifyPassword } from "../auth/password.js";
+import { assertAcceptablePassword, hashPassword, verifyPassword } from "../auth/password.js";
 import { signSessionToken } from "../auth/sessionToken.js";
 import { toUserDto } from "../auth/userDto.js";
 import { getEnv } from "../config/env.js";
@@ -86,3 +86,69 @@ authRouter.post("/logout", requireTrustedOrigin, (_request, response) => {
   clearSessionCookie(response);
   response.status(200).json({ ok: true });
 });
+
+authRouter.post("/register", requireTrustedOrigin, async (request, response, next) => {
+  try {
+    const body: unknown = request.body;
+    if (typeof body !== "object" || body === null || Array.isArray(body)) {
+      throw new HttpError(400, "invalid_request", "Nhập email, mật khẩu, tên hiển thị và vai trò.");
+    }
+    const record = body as Record<string, unknown>;
+    const allowed = new Set(["email", "password", "displayName", "role"]);
+    if (Object.keys(record).some((key) => !allowed.has(key))) {
+      throw new HttpError(400, "invalid_request", "Yêu cầu chứa trường không được phép.");
+    }
+
+    const fields: Record<string, string> = {};
+    const email = typeof record.email === "string" ? record.email.trim().toLowerCase() : "";
+    const displayName = typeof record.displayName === "string" ? record.displayName.trim() : "";
+    const role = record.role;
+    if (email.length === 0 || email.length > 160 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      fields.email = "Nhập email hợp lệ.";
+    }
+    if (displayName.length === 0 || displayName.length > 80) {
+      fields.displayName = "Tên hiển thị cần từ 1 đến 80 ký tự.";
+    }
+    if (role !== "SHIPPER" && role !== "CARRIER") {
+      fields.role = "Chỉ chủ hàng và nhà xe tự đăng ký. Tài xế do nhà xe cấp, quản trị do Coldi cấp.";
+    }
+    let password = "";
+    try {
+      if (typeof record.password !== "string") throw new HttpError(400, "invalid_request", "Mật khẩu cần từ 8 đến 72 ký tự.");
+      assertAcceptablePassword(record.password);
+      password = record.password;
+    } catch (error) {
+      fields.password = error instanceof HttpError ? error.message : "Mật khẩu cần từ 8 đến 72 ký tự.";
+    }
+    if (Object.keys(fields).length > 0) {
+      throw new HttpError(400, "invalid_request", "Còn thông tin đăng ký chưa đúng.", fields);
+    }
+    if (role !== "SHIPPER" && role !== "CARRIER") {
+      throw new HttpError(400, "invalid_request", "Còn thông tin đăng ký chưa đúng.", fields);
+    }
+
+    const passwordHash = await hashPassword(password);
+    const user = await User.create({
+      email,
+      passwordHash,
+      displayName,
+      role,
+      accountStatus: "ACTIVE",
+      mustChangePassword: false,
+      sessionVersion: 0,
+    });
+    const token = await signSessionToken(user._id.toString(), getEnv().AUTH_SECRET, user.sessionVersion ?? 0);
+    setSessionCookie(response, token);
+    response.status(201).json({ user: toUserDto(user) });
+  } catch (error) {
+    if (isDuplicateKey(error)) {
+      next(new HttpError(409, "email_taken", "Email này đã có tài khoản."));
+      return;
+    }
+    next(error);
+  }
+});
+
+function isDuplicateKey(error: unknown): boolean {
+  return typeof error === "object" && error !== null && "code" in error && (error as { code: unknown }).code === 11000;
+}

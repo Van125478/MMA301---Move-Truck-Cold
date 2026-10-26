@@ -24,7 +24,7 @@ export const shipmentStatuses = [
 
 export type ShipmentStatus = (typeof shipmentStatuses)[number];
 
-export const shipmentEventTypes = ["PUBLISHED", "CLAIMED", "ASSIGNED", "PICKUP_CONFIRMED", "DELIVERY_CONFIRMED"] as const;
+export const shipmentEventTypes = ["PUBLISHED", "CLAIMED", "ASSIGNED", "PICKUP_CONFIRMED", "DELIVERY_CONFIRMED", "CANCELLED"] as const;
 
 export type ShipmentEventType = (typeof shipmentEventTypes)[number];
 

@@ -53,8 +53,8 @@ export function LoginScreen() {
     };
   }, []);
 
-  function openUnavailable(topic: "register" | "forgot") {
-    navigation.navigate("Unavailable", { topic });
+  function openForgot() {
+    navigation.navigate("Unavailable", { topic: "forgot" });
   }
 
   async function submit() {
@@ -163,7 +163,7 @@ export function LoginScreen() {
                 <Pressable
                   accessibilityRole="button"
                   accessibilityLabel="Quên mật khẩu"
-                  onPress={() => openUnavailable("forgot")}
+                  onPress={openForgot}
                   style={styles.linkHit}
                 >
                   <Text style={[styles.link, { color: colors.primary }]}>Quên mật khẩu?</Text>
@@ -175,7 +175,7 @@ export function LoginScreen() {
                 <Pressable
                   accessibilityRole="button"
                   accessibilityLabel="Đăng ký"
-                  onPress={() => openUnavailable("register")}
+                  onPress={() => navigation.navigate("Register")}
                   style={styles.linkHit}
                 >
                   <Text style={[styles.link, { color: colors.primary }]}>Đăng ký</Text>

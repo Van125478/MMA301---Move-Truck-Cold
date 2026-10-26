@@ -1,5 +1,12 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
-import { changeRequiredPassword, fetchCurrentUser, login as loginRequest, logout as logoutRequest } from "../../services/api/auth";
+import {
+  changeRequiredPassword,
+  fetchCurrentUser,
+  login as loginRequest,
+  logout as logoutRequest,
+  registerAccount,
+  type RegisterInput,
+} from "../../services/api/auth";
 import type { AuthUser } from "../../types/auth";
 
 export type SessionState =
@@ -11,6 +18,7 @@ export type SessionState =
 type AuthContextValue = {
   session: SessionState;
   login: (identifier: string, password: string) => Promise<void>;
+  register: (input: RegisterInput) => Promise<void>;
   logout: () => Promise<void>;
   changePassword: (password: string) => Promise<void>;
   retry: () => void;
@@ -45,6 +53,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setSession({ status: "authenticated", user });
   }, []);
 
+  const register = useCallback(async (input: RegisterInput) => {
+    const user = await registerAccount(input);
+    setSession({ status: "authenticated", user });
+  }, []);
+
   const logout = useCallback(async () => {
     try {
       await logoutRequest();
@@ -61,8 +74,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const retry = useCallback(() => setAttempt((value) => value + 1), []);
 
   const value = useMemo(
-    () => ({ session, login, logout, changePassword, retry }),
-    [session, login, logout, changePassword, retry],
+    () => ({ session, login, register, logout, changePassword, retry }),
+    [session, login, register, logout, changePassword, retry],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
