@@ -54,7 +54,7 @@ export function LoginScreen() {
   }, []);
 
   function openForgot() {
-    navigation.navigate("Unavailable", { topic: "forgot" });
+    navigation.navigate("ForgotPassword");
   }
 
   async function submit() {

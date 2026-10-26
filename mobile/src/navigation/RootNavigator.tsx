@@ -4,9 +4,10 @@ import { StatusBar } from "expo-status-bar";
 import { useTheme } from "../constants/theme";
 import { useAuth } from "../features/auth/AuthProvider";
 import { ChangePasswordScreen } from "../screens/auth/ChangePasswordScreen";
+import { ForgotPasswordScreen } from "../screens/auth/ForgotPasswordScreen";
 import { LoginScreen } from "../screens/auth/LoginScreen";
 import { RegisterScreen } from "../screens/auth/RegisterScreen";
-import { UnavailableScreen } from "../screens/auth/UnavailableScreen";
+import { ResetPasswordScreen } from "../screens/auth/ResetPasswordScreen";
 import { RoleHomeScreen } from "../screens/home/RoleHomeScreen";
 import { SessionGate } from "../screens/SessionGate";
 import type { RootStackParamList } from "./types";
@@ -21,7 +22,7 @@ function linkingFor(signedIn: boolean, mustChange: boolean) {
         ? mustChange
           ? { ChangePassword: "doi-mat-khau" }
           : { Home: "trang-chu" }
-        : { Login: "dang-nhap", Register: "dang-ky", Unavailable: "chua-co" },
+        : { Login: "dang-nhap", Register: "dang-ky", ForgotPassword: "quen-mat-khau", ResetPassword: "dat-lai-mat-khau" },
     },
   };
 }
@@ -55,7 +56,8 @@ export function RootNavigator() {
           <>
             <Stack.Screen name="Login" component={LoginScreen} />
             <Stack.Screen name="Register" component={RegisterScreen} />
-            <Stack.Screen name="Unavailable" component={UnavailableScreen} />
+            <Stack.Screen name="ForgotPassword" component={ForgotPasswordScreen} />
+            <Stack.Screen name="ResetPassword" component={ResetPasswordScreen} />
           </>
         ) : mustChange ? (
           <Stack.Screen name="ChangePassword" component={ChangePasswordScreen} />

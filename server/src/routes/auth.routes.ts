@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { clearSessionCookie, setSessionCookie } from "../auth/cookies.js";
 import { assertAcceptablePassword, hashPassword, verifyPassword } from "../auth/password.js";
+import { isResetEmail, issuePasswordReset, normalizeResetEmail, resetPasswordWithCode } from "../auth/passwordReset.js";
 import { signSessionToken } from "../auth/sessionToken.js";
 import { toUserDto } from "../auth/userDto.js";
 import { getEnv } from "../config/env.js";
@@ -145,6 +146,52 @@ authRouter.post("/register", requireTrustedOrigin, async (request, response, nex
       next(new HttpError(409, "email_taken", "Email này đã có tài khoản."));
       return;
     }
+    next(error);
+  }
+});
+
+authRouter.post("/forgot-password", requireTrustedOrigin, async (request, response, next) => {
+  try {
+    const body: unknown = request.body;
+    if (typeof body !== "object" || body === null || Array.isArray(body)) {
+      throw new HttpError(400, "invalid_request", "Nhập email hợp lệ.");
+    }
+    const record = body as Record<string, unknown>;
+    if (Object.keys(record).some((key) => key !== "email")) {
+      throw new HttpError(400, "invalid_request", "Yêu cầu chứa trường không được phép.");
+    }
+    const email = normalizeResetEmail(record.email);
+    if (!isResetEmail(email)) {
+      throw new HttpError(400, "invalid_request", "Nhập email hợp lệ.", { email: "Nhập email hợp lệ." });
+    }
+    const issued = await issuePasswordReset(email);
+    response.status(200).json(issued);
+  } catch (error) {
+    next(error);
+  }
+});
+
+authRouter.post("/reset-password", requireTrustedOrigin, async (request, response, next) => {
+  try {
+    const body: unknown = request.body;
+    if (typeof body !== "object" || body === null || Array.isArray(body)) {
+      throw new HttpError(400, "invalid_request", "Nhập email, mã đặt lại và mật khẩu mới.");
+    }
+    const record = body as Record<string, unknown>;
+    const allowed = new Set(["email", "resetCode", "newPassword"]);
+    if (Object.keys(record).some((key) => !allowed.has(key))) {
+      throw new HttpError(400, "invalid_request", "Yêu cầu chứa trường không được phép.");
+    }
+    const email = normalizeResetEmail(record.email);
+    if (!isResetEmail(email)) {
+      throw new HttpError(400, "invalid_request", "Nhập email hợp lệ.", { email: "Nhập email hợp lệ." });
+    }
+    if (typeof record.resetCode !== "string" || typeof record.newPassword !== "string") {
+      throw new HttpError(400, "invalid_code", "Mã không đúng hoặc đã hết hạn.");
+    }
+    await resetPasswordWithCode(email, record.resetCode, record.newPassword);
+    response.status(200).json({ ok: true, message: "Đã đặt lại mật khẩu. Hãy đăng nhập bằng mật khẩu mới." });
+  } catch (error) {
     next(error);
   }
 });

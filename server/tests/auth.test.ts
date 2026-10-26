@@ -264,6 +264,70 @@ test("a shipper or carrier can register and receives a session", async () => {
   });
 });
 
+test("forgot password issues a one-time code and replaces the password", async () => {
+  await withServer(async (baseUrl) => {
+    const unknown = await fetch(`${baseUrl}/api/auth/forgot-password`, {
+      method: "POST",
+      headers: { "content-type": "application/json", origin: "http://127.0.0.1:5173" },
+      body: JSON.stringify({ email: "missing.auth-test@coldi.local" }),
+    });
+    const unknownBody = (await unknown.json()) as Json;
+    assert.equal(unknown.status, 200);
+    assert.equal("resetCode" in unknownBody, false);
+
+    const issued = await fetch(`${baseUrl}/api/auth/forgot-password`, {
+      method: "POST",
+      headers: { "content-type": "application/json", origin: "http://127.0.0.1:5173" },
+      body: JSON.stringify({ email: shipperEmail, role: "ADMIN" }),
+    });
+    assert.equal(issued.status, 400);
+
+    const created = await fetch(`${baseUrl}/api/auth/forgot-password`, {
+      method: "POST",
+      headers: { "content-type": "application/json", origin: "http://127.0.0.1:5173" },
+      body: JSON.stringify({ email: shipperEmail }),
+    });
+    const createdBody = (await created.json()) as Json;
+    const resetCode = createdBody.resetCode;
+    assert.equal(created.status, 200);
+    assert.equal(typeof resetCode, "string");
+    assert.equal(JSON.stringify(createdBody).includes(password), false);
+
+    const loggedIn = await login(baseUrl, shipperEmail, password);
+    const oldCookie = sessionCookie(loggedIn);
+    const wrong = await fetch(`${baseUrl}/api/auth/reset-password`, {
+      method: "POST",
+      headers: { "content-type": "application/json", origin: "http://127.0.0.1:5173" },
+      body: JSON.stringify({ email: shipperEmail, resetCode: "ZZZZZZZZ", newPassword: "replacement-password-123" }),
+    });
+    assert.equal(wrong.status, 400);
+
+    const reset = await fetch(`${baseUrl}/api/auth/reset-password`, {
+      method: "POST",
+      headers: { "content-type": "application/json", origin: "http://127.0.0.1:5173" },
+      body: JSON.stringify({ email: shipperEmail, resetCode, newPassword: "replacement-password-123" }),
+    });
+    assert.equal(reset.status, 200);
+    const reused = await fetch(`${baseUrl}/api/auth/reset-password`, {
+      method: "POST",
+      headers: { "content-type": "application/json", origin: "http://127.0.0.1:5173" },
+      body: JSON.stringify({ email: shipperEmail, resetCode, newPassword: "another-replacement-123" }),
+    });
+    assert.equal(reused.status, 400);
+
+    const oldLogin = await login(baseUrl, shipperEmail, password);
+    assert.equal(oldLogin.status, 401);
+    const stale = await fetch(`${baseUrl}/api/auth/me`, { headers: { cookie: oldCookie } });
+    assert.equal(stale.status, 401);
+    const fresh = await login(baseUrl, shipperEmail, "replacement-password-123");
+    assert.equal(fresh.status, 200);
+  });
+  await User.updateOne(
+    { email: shipperEmail },
+    { $set: { passwordHash: await hashPassword(password), mustChangePassword: false } },
+  );
+});
+
 test("login from an untrusted origin is rejected", async () => {
   await withServer(async (baseUrl) => {
     const response = await fetch(`${baseUrl}/api/auth/login`, {

@@ -1,6 +1,6 @@
 # Nghiệm thu phần thành viên 1
 
-Làm trên máy này. MongoDB đang cài sẵn, không cần Docker. Mật khẩu nằm trong `server\.env`, file này không ghi mật khẩu.
+Làm trên máy này, đứng ở thư mục gốc của kho vừa clone. MongoDB đang cài sẵn, không cần Docker. Mật khẩu nằm trong `server\.env`, file này không ghi mật khẩu.
 
 Đạt khi bốn tài khoản demo vào được đúng vai, sai mật khẩu có câu lỗi, đăng xuất rồi mở lại thì về màn đăng nhập, và tải lại trang khi còn phiên thì không phải đăng nhập lại.
 
@@ -9,7 +9,7 @@ Làm trên máy này. MongoDB đang cài sẵn, không cần Docker. Mật khẩ
 Mở một cửa sổ terminal:
 
 ```powershell
-cd C:\Coldi-Development\server
+cd server
 npm run dev
 ```
 
@@ -33,7 +33,7 @@ Invoke-RestMethod http://127.0.0.1:4000/api/health
 Mở cửa sổ terminal thứ hai:
 
 ```powershell
-cd C:\Coldi-Development\mobile
+cd mobile
 npm install
 npx expo start --web --port 5173 --host lan
 ```
@@ -68,8 +68,8 @@ Sau tài khoản chủ hàng, làm thêm bốn bước này:
 
 1. Nhập đúng email chủ hàng, mật khẩu gõ `sai-mat-khau`, bấm **Đăng nhập**. Phải thấy câu `Email, tên đăng nhập hoặc mật khẩu không đúng.` Ô mật khẩu vẫn trống ý nghĩa là chưa vào được.
 2. Xóa hết hai ô, bấm **Đăng nhập**. Phải thấy `Còn ô chưa nhập.` và dòng đỏ dưới từng ô.
-3. Bấm **Quên mật khẩu?** Phải thấy `Chưa có quên mật khẩu trên máy chủ`. Bấm **Quay lại đăng nhập**.
-4. Bấm **Đăng ký**. Nhập tên hiển thị, chọn **Chủ hàng**, email chưa có trong hệ thống, mật khẩu từ 8 đến 72 ký tự. Bấm **Tạo tài khoản**. Phải vào màn **Chủ hàng** và thấy `Máy chủ trả vai: SHIPPER`. Đăng xuất, rồi đăng nhập lại bằng email vừa tạo. Tài xế không có lựa chọn tự đăng ký.
+3. Bấm **Đăng ký**. Nhập tên hiển thị, chọn **Chủ hàng**, email chưa có trong hệ thống, mật khẩu từ 8 đến 72 ký tự. Bấm **Tạo tài khoản**. Phải vào màn **Chủ hàng** và thấy `Máy chủ trả vai: SHIPPER`. Đăng xuất, rồi đăng nhập lại bằng email vừa tạo. Tài xế không có lựa chọn tự đăng ký.
+4. Vẫn dùng email vừa tạo, không dùng tài khoản demo chung. Bấm **Quên mật khẩu?**, nhập email đó, bấm **Lấy mã đặt lại**. Mã hiện trên màn vì máy local chưa gửi email. Nhập mật khẩu mới từ 8 đến 72 ký tự, bấm **Đặt lại mật khẩu**, rồi **Quay lại đăng nhập**. Đăng nhập bằng mật khẩu mới phải vào được. Đăng nhập bằng mật khẩu cũ phải thấy câu sai mật khẩu.
 
 Phiên còn sống:
 
@@ -97,7 +97,7 @@ EXPO_PUBLIC_API_ORIGIN=http://10.0.2.2:4000
 API trên máy tính vẫn chạy ở cổng `4000`. Rồi:
 
 ```powershell
-cd C:\Coldi-Development\mobile
+cd mobile
 npx expo start --android
 ```
 

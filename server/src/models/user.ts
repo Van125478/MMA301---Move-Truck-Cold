@@ -19,6 +19,8 @@ const userSchema = new Schema(
     accountStatus: { type: String, enum: accountStatuses, default: "ACTIVE" },
     mustChangePassword: { type: Boolean, default: false },
     sessionVersion: { type: Number, default: 0 },
+    passwordResetHash: { type: String },
+    passwordResetExpiresAt: { type: Date },
     heldShipmentIds: [{ type: Schema.Types.ObjectId, ref: "Shipment" }],
   },
   { timestamps: true },

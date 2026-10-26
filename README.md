@@ -16,7 +16,24 @@ Người mới làm đúng thứ tự: lấy mã, nối MongoDB, chạy API, r�
 
 Bốn vai: chủ hàng, nhà xe, tài xế, quản trị. Một tài khoản một vai. Tài xế do nhà xe tạo, không tự vào sàn nhận chuyến.
 
-App mobile hiện đọc danh sách chuyến, xem chi tiết, tìm kiếm, lưu chuyến quan tâm và ghi đánh giá qua `/api/mobile`. Nhà xe thấy đơn đang tìm xe. Chủ hàng chỉ thấy đơn của mình. Đánh giá chỉ gửi được sau khi chuyến đã xác nhận giao.
+App mobile hiện có đăng nhập, đăng ký, quên mật khẩu, giữ phiên và mở đúng vai. Danh sách đơn, nhận chuyến, tài xế và yêu thích để thành viên 2, 3, 4 gắn tiếp. Yêu thích theo bài lưu bằng AsyncStorage trên máy.
+
+## Việc backend cho bài mobile
+
+Các đường dưới đây đã có trên API. Hủy đơn chỉ khi trạng thái còn `PUBLISHED`. Quên mật khẩu không gửi email: ngoài production, mã một lần hiện trên app trong 15 phút.
+
+| Việc | Đường | Ai |
+| --- | --- | --- |
+| Đăng ký | `POST /api/auth/register` | Khách. Chỉ `SHIPPER` hoặc `CARRIER` |
+| Đăng nhập, phiên, đăng xuất | `POST /api/auth/login`, `GET /api/auth/me`, `POST /api/auth/logout` | Đúng tài khoản |
+| Quên và đặt lại mật khẩu | `POST /api/auth/forgot-password`, `POST /api/auth/reset-password` | Email của tài khoản đang mở |
+| Danh sách, chi tiết, tạo đơn | `GET /api/shipments/mine`, `GET /api/shipments/:id`, `POST /api/shipments` | SHIPPER |
+| Hủy đơn đang tìm xe | `POST /api/shipments/:id/cancel` với `{}` | SHIPPER, đúng chủ đơn |
+| Sàn và nhận chuyến | `GET /api/carrier/shipments`, `POST /api/carrier/shipments/:id/claim` | CARRIER |
+| Chuyến đã nhận, gán xe và tài xế | `GET /api/carrier/shipments/claimed`, `POST /api/carrier/shipments/:id/assign` | CARRIER |
+| Chuyến của tài xế, lấy hàng, giao hàng | `GET /api/driver/shipments`, `POST /api/driver/shipments/:id/pickup`, `POST /api/driver/shipments/:id/delivery` | DRIVER |
+
+Chi tiết màn hình người 1 nằm ở [mobile/README.md](mobile/README.md). Cách bấm nghiệm thu nằm ở [mobile/NGHIEM_THU.md](mobile/NGHIEM_THU.md).
 
 ## Thư mục
 
@@ -118,26 +135,6 @@ npm install
 npm start
 ```
 
-`App.tsx` chỉ là điểm vào. Màn hình và logic để đúng thư mục:
+`App.tsx` chỉ là điểm vào. Màn hình người 1 nằm trong `mobile/src/screens/auth`. Thành viên 2, 3, 4 gắn màn đơn, chuyến và yêu thích vào `mobile/src/screens` và `mobile/src/features`. Cookie phiên tên `coldi_session`.
 
-| Đường dẫn | Việc |
-| --- | --- |
-| `src/navigation` | Tab, stack, drawer |
-| `src/screens/shipments` | Danh sách và chi tiết chuyến |
-| `src/screens/favorites` | Chuyến đã lưu |
-| `src/screens/search` | Tìm theo mô tả hàng hoặc tuyến |
-| `src/screens/reviews` | Sao và nhận xét |
-| `src/services/api` | Gọi API. Không gọi `fetch` trong màn hình |
-| `src/components` | Nút và thẻ dùng chung |
-| `src/features` | Lọc, sắp cước, lưu, đánh giá |
-
-API cho app, cookie phiên tên `coldi_session`:
-
-- `GET /api/mobile/shipments?q=&temperature=&sort=priceDesc`
-- `GET /api/mobile/shipments/:id`
-- `GET` và `POST /api/mobile/shipments/:id/reviews`
-- `GET` và `POST /api/mobile/favorites`
-- `DELETE /api/mobile/favorites/:shipmentId`
-- `DELETE /api/mobile/favorites`
-
-Nhà xe thấy đơn đang tìm xe. Chủ hàng chỉ thấy đơn của mình. App hiện chưa gọi các đường này. Viết hàm trong `src/services/api` trước, rồi gắn vào màn hình.
+`/api/mobile/shipments` và `/api/mobile/favorites` vẫn có trên máy chủ. Bài mobile giữ yêu thích bằng AsyncStorage, không dùng API yêu thích đó.

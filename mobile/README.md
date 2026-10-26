@@ -39,7 +39,9 @@ App gọi đúng API đang có:
 
 Phiên là cookie `coldi_session`, hết hạn sau 12 giờ. Không có refresh token. Trên điện thoại, app đọc cookie đó và giữ trong Secure Store. Không lưu mật khẩu. Ô ghi nhớ đăng nhập chỉ giữ email hoặc tên đăng nhập.
 
-Chủ hàng và nhà xe đăng ký trên màn **Đăng ký**. Tài xế và quản trị không tự đăng ký: tài xế do nhà xe cấp tại `POST /api/carrier/fleet/drivers`. Quên mật khẩu chưa có API. Dòng đó mở một trang nói rõ, không giả lập thành công.
+Chủ hàng và nhà xe đăng ký trên màn **Đăng ký**. Tài xế và quản trị không tự đăng ký: tài xế do nhà xe cấp tại `POST /api/carrier/fleet/drivers`.
+
+Quên mật khẩu gọi `POST /api/auth/forgot-password` với `{ "email" }`, rồi `POST /api/auth/reset-password` với `{ "email", "resetCode", "newPassword" }`. Máy chủ chưa gửi email. Khi không chạy production, mã hiện trên app nếu email thuộc tài khoản đang mở, dùng một lần trong 15 phút. Đặt lại xong, phiên cũ hết hiệu lực và phải đăng nhập bằng mật khẩu mới. Tài xế chỉ có tên đăng nhập thì nhà xe cấp lại ở `POST /api/carrier/fleet/drivers/:id/reset-password`.
 
 ## API cho thành viên 2 và 3
 
@@ -75,7 +77,7 @@ Màn đăng nhập theo ảnh mobile trong bộ thiết kế Coldi: thẻ trắn
 | --- | --- |
 | `App.tsx` | Nạp chữ, rồi gắn phiên và điều hướng. |
 | `src/navigation` | Stack đăng nhập và màn theo vai. |
-| `src/screens/auth` | Đăng nhập, đăng ký, đổi mật khẩu tạm, trang quên mật khẩu chưa có API. |
+| `src/screens/auth` | Đăng nhập, đăng ký, quên mật khẩu, đổi mật khẩu tạm. |
 | `src/screens/home` | Màn đầu sau đăng nhập. Thành viên đơn và chuyến gắn tiếp từ đây. |
 | `src/services/api` | Hàm gọi API. Không gọi `fetch` trong màn hình. |
 | `src/features/auth` | Trạng thái phiên. |

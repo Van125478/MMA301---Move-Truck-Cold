@@ -86,6 +86,34 @@ export async function changeRequiredPassword(newPassword: string): Promise<AuthU
   return user;
 }
 
+export async function requestPasswordReset(email: string): Promise<{ message: string; resetCode: string | null }> {
+  const result = await apiRequest<unknown>("/api/auth/forgot-password", {
+    method: "POST",
+    body: { email },
+  });
+  const body = result.data;
+  if (typeof body !== "object" || body === null) {
+    throw new ApiError(0, "invalid_response", "Máy chủ trả về dữ liệu đặt lại mật khẩu không đúng cấu trúc.");
+  }
+  const record = body as Record<string, unknown>;
+  return {
+    message: typeof record.message === "string" ? record.message : "Nếu email có tài khoản đang mở, mã đặt lại hiện ở bước sau.",
+    resetCode: typeof record.resetCode === "string" && record.resetCode.length > 0 ? record.resetCode : null,
+  };
+}
+
+export async function resetPassword(email: string, resetCode: string, newPassword: string): Promise<string> {
+  const result = await apiRequest<unknown>("/api/auth/reset-password", {
+    method: "POST",
+    body: { email, resetCode, newPassword },
+  });
+  const body = result.data;
+  if (typeof body === "object" && body !== null && typeof (body as { message?: unknown }).message === "string") {
+    return (body as { message: string }).message;
+  }
+  return "Đã đặt lại mật khẩu. Hãy đăng nhập bằng mật khẩu mới.";
+}
+
 export async function logout(): Promise<void> {
   const token = await currentToken();
   try {

@@ -103,12 +103,15 @@ Cookie `coldi_session`, 12 giờ, `HttpOnly`, `SameSite=Lax`, `Secure` chỉ khi
 
 | Phương thức | Đường dẫn | Kết quả |
 | --- | --- | --- |
-| `POST` | `/api/auth/login` | Đặt cookie. Trả `user` gồm `id`, `email`, `role`, `accountStatus`, `mustChangePassword` |
+| `POST` | `/api/auth/register` | Tạo `SHIPPER` hoặc `CARRIER`, trả 201 và đặt cookie. Email trùng: 409 `email_taken`. `DRIVER` và `ADMIN` không tự đăng ký |
+| `POST` | `/api/auth/login` | Đặt cookie. Trả `user` gồm `id`, `email`, `role`, `accountStatus`, `mustChangePassword`. Ô email cũng nhận tên đăng nhập của tài xế |
 | `GET` | `/api/auth/me` | Cùng dạng user, hoặc 401 |
 | `POST` | `/api/auth/change-required-password` | Đổi mật khẩu tạm khi đang bị yêu cầu, rồi cấp cookie mới |
 | `POST` | `/api/auth/logout` | Xóa cookie |
+| `POST` | `/api/auth/forgot-password` | Body chỉ `{ "email" }`. Tài khoản email đang mở, ngoài production: trả `resetCode` 8 ký tự, hiệu lực 15 phút, dùng một lần. Production, email lạ, tài khoản khóa hoặc tài xế chỉ có tên đăng nhập: cùng một câu, không có mã |
+| `POST` | `/api/auth/reset-password` | Body `{ "email", "resetCode", "newPassword" }`. Đặt mật khẩu mới, xóa mã, tăng phiên bản phiên. Không tự đăng nhập |
 
-Sai email hoặc sai mật khẩu: 401, câu `Email hoặc mật khẩu không đúng.` Đúng mật khẩu nhưng tài khoản khóa: 403 `account_locked`, không đặt cookie. Vai gửi từ client bị bỏ qua. Khóa, đặt lại mật khẩu và đổi mật khẩu bắt buộc tăng phiên bản phiên, cookie cũ hết hiệu lực.
+Sai email hoặc sai mật khẩu: 401, câu `Email, tên đăng nhập hoặc mật khẩu không đúng.` Đúng mật khẩu nhưng tài khoản khóa: 403 `account_locked`, không đặt cookie. Vai gửi từ client lúc đăng nhập bị bỏ qua. Khóa, đặt lại mật khẩu và đổi mật khẩu bắt buộc tăng phiên bản phiên, cookie cũ hết hiệu lực.
 
 Bốn email gợi ý: `shipper.demo@coldi.local`, `carrier.demo@coldi.local`, `driver.demo@coldi.local`, `admin.demo@coldi.local`. Mật khẩu chỉ ở `.env`.
 
@@ -121,6 +124,7 @@ Chưa có giới hạn số lần đăng nhập. Chưa đủ cho production.
 | `POST` | `/api/shipments` | SHIPPER đang đăng nhập. Tạo `PUBLISHED`. `shipperId` lấy từ phiên |
 | `GET` | `/api/shipments/mine` | Đơn của chủ hàng đó |
 | `GET` | `/api/shipments/:id` | Chủ hàng sở hữu đơn |
+| `POST` | `/api/shipments/:id/cancel` | Body chỉ `{}`. Đúng chủ hàng và trạng thái `PUBLISHED` thì sang `CANCELLED`. Đơn đã có nhà xe nhận: 409 |
 | `GET` | `/api/shipments/:id/location` | Đúng chủ hàng. Chủ hàng khác: 403 |
 | `GET` | `/api/carrier/shipments` | CARRIER, đơn đang mở. Quét tối đa 500, trả tối đa 100 |
 | `POST` | `/api/carrier/shipments/:id/claim` | Một nhà xe thắng. Nhà xe thứ hai: 409 |
@@ -147,13 +151,15 @@ Chat nhà xe: `POST /api/carrier/conversations/by-shipment/:shipmentId` mở cu�
 
 Xác nhận lần hai không kéo trạng thái lùi. Giao không sang `COMPLETED` và không ghi thanh toán. GPS không đổi trạng thái và không thêm mốc timeline.
 
-Sự kiện timeline: `PUBLISHED`, `CLAIMED`, `ASSIGNED`, `PICKUP_CONFIRMED`, `DELIVERY_CONFIRMED`. `ASSIGNED` mới lưu tên xe và tên tài xế lúc gán. Sự kiện cũ không có hai trường đó vẫn đọc được và dùng tên hiện tại, nên câu đó không phải ảnh lịch sử bất biến.
+Sự kiện timeline: `PUBLISHED`, `CLAIMED`, `ASSIGNED`, `PICKUP_CONFIRMED`, `DELIVERY_CONFIRMED`, `CANCELLED`. `ASSIGNED` mới lưu tên xe và tên tài xế lúc gán. Sự kiện cũ không có hai trường đó vẫn đọc được và dùng tên hiện tại, nên câu đó không phải ảnh lịch sử bất biến.
 
 ADMIN không có router nghiệp vụ. Khách 401. Sai vai 403 trên route yêu cầu vai.
 
 ## Việc còn mở
 
-Một nhà xe nhận một đơn. Nhận chuyến không gán xe. Chat không giữ chỗ. Tile Mapbox chưa được chứng minh khi render thật. Thời gian lưu tin và quyền đọc của nhà xe thua claim chưa chốt. Không có tenant tổ chức. Audit ghi sau khi nghiệp vụ thành công và có thể mất nếu tiến trình dừng trước insert. Không có gói dịch vụ, hạn mức, hay thanh toán.
+Một nhà xe nhận một đơn. Nhận chuyến không gán xe. Chat không giữ chỗ. Tile Mapbox chưa được chứng minh khi render thật. Thời gian lưu tin và quyền đọc của nhà xe thua claim chưa chốt. Không có tenant tổ chức. Audit ghi sau khi nghiệp vụ thành công và có thể mất nếu tiến trình dừng trước insert. Không có thanh toán thật.
+
+Với bài mobile: hủy đơn sau `MATCHED` vẫn đóng. Quên mật khẩu khi `NODE_ENV=production` không cấp mã vì chưa có máy gửi email.
 
 ## Lịch sử
 
