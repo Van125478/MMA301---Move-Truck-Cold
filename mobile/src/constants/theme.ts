@@ -34,6 +34,14 @@ export type Palette = {
   danger: string;
   focus: string;
   shadow: string;
+  neutralBg: string;
+  neutralInk: string;
+  successBg: string;
+  successInk: string;
+  warningBg: string;
+  warningInk: string;
+  dangerBg: string;
+  dangerInk: string;
 };
 
 const light: Palette = {
@@ -54,6 +62,14 @@ const light: Palette = {
   danger: "#B91C1C",
   focus: "#1E3A8A",
   shadow: "#0F172A",
+  neutralBg: "#F1F5F9",
+  neutralInk: "#475569",
+  successBg: "#DCFCE7",
+  successInk: "#15803D",
+  warningBg: "#FEF3C7",
+  warningInk: "#B45309",
+  dangerBg: "#FEE2E2",
+  dangerInk: "#B91C1C",
 };
 
 const dark: Palette = {
@@ -74,6 +90,14 @@ const dark: Palette = {
   danger: "#FCA5A5",
   focus: "#93C5FD",
   shadow: "#000000",
+  neutralBg: "#1E293B",
+  neutralInk: "#CBD5E1",
+  successBg: "#064E3B",
+  successInk: "#6EE7B7",
+  warningBg: "#78350F",
+  warningInk: "#FCD34D",
+  dangerBg: "#450A0A",
+  dangerInk: "#FCA5A5",
 };
 
 export const type = {
