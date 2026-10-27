@@ -42,3 +42,8 @@ export async function unreadNotificationCount(): Promise<number> {
 export function markNotificationRead(id: string): Promise<void> {
   return authed(`/api/notices/${id}/read`, { method: "POST", body: {} }).then(() => undefined);
 }
+
+export function deleteNotifications(ids: readonly string[]): Promise<void> {
+  if (ids.length === 0) return Promise.resolve();
+  return authed("/api/notices/bulk-delete", { method: "POST", body: { ids } }).then(() => undefined);
+}
