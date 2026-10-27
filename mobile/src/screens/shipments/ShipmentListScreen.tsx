@@ -59,6 +59,7 @@ export function ShipmentListScreen({ onOpenShipment }: { onOpenShipment?: (shipm
   }
 
   const { shipments } = state;
+  const isEmpty = shipments.length === 0;
 
   return (
     <SafeAreaView style={[styles.safe, { backgroundColor: colors.background }]}>
@@ -67,26 +68,31 @@ export function ShipmentListScreen({ onOpenShipment }: { onOpenShipment?: (shipm
           Đơn hàng của tôi
         </Text>
         <Text style={[styles.subtitle, { color: colors.muted }]}>
-          {shipments.length === 0 ? "Chưa có đơn nào." : `${shipments.length} đơn.`}
+          {isEmpty ? "Chưa có đơn nào." : `${shipments.length} đơn.`}
         </Text>
       </View>
 
-      {shipments.length === 0 ? (
-        <View style={styles.center}>
-          <MaterialCommunityIcons name="package-variant-closed" size={40} color={colors.hint} />
-          <Text style={[styles.body, { color: colors.muted, textAlign: "center", marginTop: space.md }]}>
-            Đăng đơn đầu tiên để tìm nhà xe.
-          </Text>
-        </View>
-      ) : (
-        <FlatList
-          data={shipments}
-          keyExtractor={(item) => item.id}
-          contentContainerStyle={styles.list}
-          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => void refresh()} tintColor={colors.primary} />}
-          renderItem={({ item }) => <ShipmentCard shipment={item} onPress={() => onOpenShipment?.(item)} />}
-        />
-      )}
+      <FlatList
+        data={shipments}
+        keyExtractor={(item) => item.id}
+        contentContainerStyle={isEmpty ? styles.emptyList : styles.list}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => void refresh()} tintColor={colors.primary} />}
+        renderItem={({ item }) => <ShipmentCard shipment={item} onPress={() => onOpenShipment?.(item)} />}
+        ListEmptyComponent={
+          <View accessibilityRole="text" style={styles.emptyState}>
+            <View style={[styles.emptyIconWrap, { backgroundColor: colors.badge }]}>
+              <MaterialCommunityIcons name="package-variant-closed" size={36} color={colors.primary} />
+            </View>
+            <Text accessibilityRole="header" style={[styles.emptyTitle, { color: colors.ink }]}>
+              Chưa có đơn hàng nào
+            </Text>
+            <Text style={[styles.body, { color: colors.muted, textAlign: "center", marginTop: space.sm }]}>
+              Các đơn bạn đăng để tìm nhà xe sẽ hiển thị ở đây. Kéo xuống để làm mới sau khi bạn tạo đơn mới.
+            </Text>
+            <PrimaryButton label="Làm mới" onPress={() => void refresh()} pending={refreshing} pendingLabel="Đang làm mới…" />
+          </View>
+        }
+      />
     </SafeAreaView>
   );
 }
@@ -98,6 +104,10 @@ const styles = StyleSheet.create({
   errorTitle: { ...textType.title },
   subtitle: { ...textType.body, marginTop: space.xs },
   list: { paddingHorizontal: space.xl, paddingTop: space.sm, paddingBottom: space.xxl },
+  emptyList: { flexGrow: 1, paddingHorizontal: space.xl },
   center: { flex: 1, alignItems: "center", justifyContent: "center", padding: space.xl },
+  emptyState: { flex: 1, alignItems: "center", justifyContent: "center", paddingVertical: space.xxxl },
+  emptyIconWrap: { width: 72, height: 72, borderRadius: 36, alignItems: "center", justifyContent: "center" },
+  emptyTitle: { ...textType.title, marginTop: space.lg, textAlign: "center" },
   body: { ...textType.body },
 });
