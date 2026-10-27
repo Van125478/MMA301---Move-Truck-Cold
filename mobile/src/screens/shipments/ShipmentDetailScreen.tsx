@@ -237,7 +237,7 @@ function ShipmentDetailBody({
               {vehicles.map((vehicle) => (
                 <ChoiceChip
                   key={vehicle.id}
-                  label={vehicle.availableForAssignment ? vehicleLabel(vehicle) : `${vehicleLabel(vehicle)} · đang bận`}
+                  label={vehicleChoiceLabel(vehicle)}
                   selected={vehicleId === vehicle.id}
                   onPress={() => {
                     if (vehicle.availableForAssignment) setVehicleId(vehicle.id);
@@ -250,10 +250,15 @@ function ShipmentDetailBody({
             <View style={styles.chips}>
               {drivers.map((driver) => {
                 const ready = driver.accountStatus === "ACTIVE" && !driver.mustChangePassword;
+                const driverLabel = driver.accountStatus === "LOCKED"
+                  ? `${driver.name} · tạm dừng`
+                  : ready
+                    ? driver.name
+                    : `${driver.name} · chưa phân công được`;
                 return (
                   <ChoiceChip
                     key={driver.id}
-                    label={ready ? driver.name : `${driver.name} · chưa phân công được`}
+                    label={driverLabel}
                     selected={driverId === driver.id}
                     onPress={() => {
                       if (ready) setDriverId(driver.id);
@@ -340,6 +345,13 @@ export function ShipmentDetailPanel({ shipmentId, onClose }: { shipmentId: strin
 
 function vehicleLabel(vehicle: FleetVehicle): string {
   return vehicle.plate ? `${vehicle.label} · ${vehicle.plate}` : vehicle.label;
+}
+
+function vehicleChoiceLabel(vehicle: FleetVehicle): string {
+  const name = vehicleLabel(vehicle);
+  if (vehicle.status === "ARCHIVED") return `${name} · tạm dừng`;
+  if (!vehicle.availableForAssignment) return `${name} · đang bận`;
+  return name;
 }
 
 const confirmCopy: Record<Action, { title: string; body: string; confirm: string }> = {
