@@ -5,7 +5,9 @@ import { useFocusEffect, useNavigation, useRoute } from "@react-navigation/nativ
 import type { RouteProp } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { ChoiceChip, ConfirmDialog, ErrorState, LoadingBlock, StatusPill } from "../../components/common/Feedback";
+import { ConfirmDialog, ErrorState, LoadingBlock, StatusPill } from "../../components/common/Feedback";
+import { AssignmentSuccessSheet } from "../../components/shipments/AssignmentSuccessSheet";
+import { CarrierAssignmentSection } from "../../components/shipments/CarrierAssignmentSection";
 import { PhoneFrame } from "../../components/common/PhoneFrame";
 import { FieldError } from "../../components/common/FieldError";
 import { PrimaryButton } from "../../components/common/PrimaryButton";
@@ -28,7 +30,6 @@ import {
 import { startLiveShare, stopLiveShare } from "../../services/location/liveShare";
 import type { FleetDriver, FleetVehicle, Shipment, TrackingView } from "../../types/shipment";
 import { CargoVehicleSection } from "../../components/shipment/CargoVehicleSection";
-import { DetailSectionShell } from "../../components/shipment/DetailSectionShell";
 import { DangerLink, ShipmentDetailActions } from "../../components/shipment/ShipmentDetailActions";
 import { ShipmentLocationSection } from "../../components/shipment/ShipmentLocationSection";
 import { ShipmentTimelineSection } from "../../components/shipment/ShipmentTimelineSection";
@@ -80,6 +81,7 @@ function ShipmentDetailBody({
   const [vehicleId, setVehicleId] = useState<string | null>(null);
   const [driverId, setDriverId] = useState<string | null>(null);
   const [fleetNote, setFleetNote] = useState<string | null>(null);
+  const [assignmentSuccess, setAssignmentSuccess] = useState<Shipment | null>(null);
   const role = session.status === "authenticated" ? session.user.role : null;
 
   const load = useCallback(async () => {
@@ -146,6 +148,11 @@ function ShipmentDetailBody({
                 : await assignShipment(shipment.id, vehicleId ?? "", driverId ?? "");
       setShipment(next);
       setConfirm(null);
+      if (action === "assign") {
+        setVehicleId(null);
+        setDriverId(null);
+        setAssignmentSuccess(next);
+      }
       if (role === "DRIVER" && action === "pickup" && next.status === "IN_TRANSIT") startLiveShare(next.id);
       if (role === "DRIVER" && action === "delivery") stopLiveShare();
       await favorites.refreshSaved(next);
@@ -230,41 +237,19 @@ function ShipmentDetailBody({
         {actionError ? <FieldError message={actionError} /> : null}
 
         {canAssign ? (
-          <DetailSectionShell title="Phân công chuyến" subtitle="Chọn xe rảnh và tài xế sẵn sàng" icon="account-hard-hat">
-            {fleetNote ? <FieldError message={fleetNote} /> : null}
-            <Text style={[styles.pickLabel, { color: colors.ink }]}>Xe</Text>
-            <View style={styles.chips}>
-              {vehicles.map((vehicle) => (
-                <ChoiceChip
-                  key={vehicle.id}
-                  label={vehicle.availableForAssignment ? vehicleLabel(vehicle) : `${vehicleLabel(vehicle)} · đang bận`}
-                  selected={vehicleId === vehicle.id}
-                  onPress={() => {
-                    if (vehicle.availableForAssignment) setVehicleId(vehicle.id);
-                  }}
-                />
-              ))}
-            </View>
-            {vehicles.length === 0 ? <Text style={[styles.hint, { color: colors.muted }]}>Nhà xe chưa có xe.</Text> : null}
-            <Text style={[styles.pickLabel, { color: colors.ink }]}>Tài xế</Text>
-            <View style={styles.chips}>
-              {drivers.map((driver) => {
-                const ready = driver.accountStatus === "ACTIVE" && !driver.mustChangePassword;
-                return (
-                  <ChoiceChip
-                    key={driver.id}
-                    label={ready ? driver.name : `${driver.name} · chưa phân công được`}
-                    selected={driverId === driver.id}
-                    onPress={() => {
-                      if (ready) setDriverId(driver.id);
-                    }}
-                  />
-                );
-              })}
-            </View>
-            {drivers.length === 0 ? <Text style={[styles.hint, { color: colors.muted }]}>Nhà xe chưa có tài xế.</Text> : null}
-            <PrimaryButton spaced={false} label="Phân công" disabled={!vehicleId || !driverId} onPress={() => setConfirm("assign")} />
-          </DetailSectionShell>
+          <CarrierAssignmentSection
+            vehicles={vehicles}
+            drivers={drivers}
+            vehicleId={vehicleId}
+            driverId={driverId}
+            fleetNote={fleetNote}
+            onSelectVehicle={(id) => {
+              setVehicleId(id);
+              setDriverId(null);
+            }}
+            onSelectDriver={setDriverId}
+            onAssign={() => setConfirm("assign")}
+          />
         ) : null}
 
         <Section title="Lộ trình">
@@ -299,6 +284,12 @@ function ShipmentDetailBody({
           {canCancel ? <DangerLink label="Hủy đơn đang tìm xe" onPress={() => setConfirm("cancel")} /> : null}
         </ShipmentDetailActions>
       </ScrollView>
+      <AssignmentSuccessSheet
+        visible={assignmentSuccess !== null}
+        shipment={assignmentSuccess}
+        onClose={() => setAssignmentSuccess(null)}
+        onViewDetail={() => setAssignmentSuccess(null)}
+      />
       <ConfirmDialog
         visible={confirm !== null}
         title={confirmCopy[confirm ?? "claim"].title}
@@ -336,10 +327,6 @@ export function ShipmentDetailScreen() {
 
 export function ShipmentDetailPanel({ shipmentId, onClose }: { shipmentId: string; onClose: () => void }) {
   return <ShipmentDetailBody shipmentId={shipmentId} presentation="embedded" onClose={onClose} />;
-}
-
-function vehicleLabel(vehicle: FleetVehicle): string {
-  return vehicle.plate ? `${vehicle.label} · ${vehicle.plate}` : vehicle.label;
 }
 
 const confirmCopy: Record<Action, { title: string; body: string; confirm: string }> = {
@@ -426,9 +413,6 @@ const styles = StyleSheet.create({
   stopLabel: { fontFamily: "Inter_600SemiBold", fontSize: 13, lineHeight: 18, letterSpacing: 0.4 },
   stopPlace: { fontFamily: "Inter_600SemiBold", fontSize: 16, lineHeight: 24 },
   eventMeta: { fontFamily: "Inter_400Regular", fontSize: 14, lineHeight: 20 },
-  pickLabel: { fontFamily: "Inter_600SemiBold", fontSize: 14, lineHeight: 20 },
-  hint: { fontFamily: "Inter_400Regular", fontSize: 14, lineHeight: 20 },
-  chips: { flexDirection: "row", flexWrap: "wrap", gap: space.sm },
   removeMissing: { minHeight: 48, alignItems: "center", justifyContent: "center", marginBottom: space.xl },
   removeMissingText: { fontFamily: "Inter_600SemiBold", fontSize: 15, lineHeight: 22, textAlign: "center", paddingHorizontal: space.lg },
 });

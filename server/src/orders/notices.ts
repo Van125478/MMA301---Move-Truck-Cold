@@ -143,3 +143,23 @@ export async function markOrderNoticeRead(recipientId: string, noticeId: string,
   ).lean<NoticeSource | null>();
   return toView(updated ?? existing);
 }
+
+export async function deleteOrderNotice(recipientId: string, noticeId: string, actor: Actor): Promise<void> {
+  if (noticeId.startsWith("incident_")) {
+    const incidentNoticeId = noticeId.slice("incident_".length);
+    if (!isValidObjectId(incidentNoticeId)) throw new HttpError(404, "not_found", "Không tìm thấy thông báo này.");
+    const removed = await IncidentNotification.deleteOne({ _id: incidentNoticeId, recipientId: actor.id });
+    if (removed.deletedCount === 0) throw new HttpError(404, "not_found", "Không tìm thấy thông báo này.");
+    return;
+  }
+  const orderId = noticeId.startsWith("order_") ? noticeId.slice("order_".length) : noticeId;
+  if (!isValidObjectId(orderId)) throw new HttpError(404, "not_found", "Không tìm thấy thông báo này.");
+  const removed = await OrderNotice.deleteOne({ _id: orderId, recipientId });
+  if (removed.deletedCount === 0) throw new HttpError(404, "not_found", "Không tìm thấy thông báo này.");
+}
+
+export async function deleteOrderNotices(recipientId: string, noticeIds: readonly string[], actor: Actor): Promise<void> {
+  for (const noticeId of noticeIds) {
+    await deleteOrderNotice(recipientId, noticeId, actor);
+  }
+}

@@ -154,53 +154,111 @@ try {
       );
     }
 
-    const claimed = await Shipment.findOneAndUpdate(
-      { shipperId: shipper._id, cargoDescription: "Hải sản đông lạnh chờ phân công" },
+    const awaitingAssignment = [
       {
-        $set: {
-          ...base,
-          cargoDescription: "Hải sản đông lạnh chờ phân công",
-          pickupLocation: "Cần Thơ",
-          deliveryLocation: "TP. Hồ Chí Minh",
-          pickupDate: "2026-10-28",
-          pickupTimeFrom: "04:00",
-          pickupTimeTo: "06:00",
-          deliveryDate: "2026-10-28",
-          deliveryTimeFrom: "10:00",
-          deliveryTimeTo: "14:00",
-          cargoWeightTon: 6,
-          cargoVolumeM3: 14,
-          packageCount: 90,
-          temperatureGroup: "DEEP_FROZEN",
-          vehicleRequirement: "Xe lạnh",
-          listedPriceVnd: 18_000_000,
-          status: "MATCHED",
-          carrierId: carrier._id,
-          vehicleId: null,
-          driverId: null,
-          events: [
-            {
-              type: "PUBLISHED",
-              occurredAt: hourAgo,
-              actorId: shipper._id,
-              actorRole: "SHIPPER",
-              statusAfter: "PUBLISHED",
-              sequence: 1,
-            },
-            {
-              type: "CLAIMED",
-              occurredAt: now,
-              actorId: carrier._id,
-              actorRole: "CARRIER",
-              statusBefore: "PUBLISHED",
-              statusAfter: "MATCHED",
-              sequence: 2,
-            },
-          ],
-        },
+        cargoDescription: "Hải sản đông lạnh chờ phân công",
+        pickupLocation: "Cần Thơ",
+        deliveryLocation: "TP. Hồ Chí Minh",
+        pickupDate: "2026-10-28",
+        pickupTimeFrom: "04:00",
+        pickupTimeTo: "06:00",
+        deliveryDate: "2026-10-28",
+        deliveryTimeFrom: "10:00",
+        deliveryTimeTo: "14:00",
+        cargoWeightTon: 6,
+        cargoVolumeM3: 14,
+        packageCount: 90,
+        temperatureGroup: "DEEP_FROZEN" as const,
+        listedPriceVnd: 18_000_000,
       },
-      { upsert: true, returnDocument: "after" },
-    );
+      {
+        cargoDescription: "Sữa tươi lạnh chờ phân công",
+        pickupLocation: "Bình Dương",
+        deliveryLocation: "Cần Thơ",
+        pickupDate: "2026-10-28",
+        pickupTimeFrom: "06:00",
+        pickupTimeTo: "08:00",
+        deliveryDate: "2026-10-28",
+        deliveryTimeFrom: "14:00",
+        deliveryTimeTo: "18:00",
+        cargoWeightTon: 3,
+        cargoVolumeM3: 8,
+        packageCount: 40,
+        temperatureGroup: "COOL" as const,
+        listedPriceVnd: 7_500_000,
+      },
+      {
+        cargoDescription: "Thịt gà đông chờ phân công",
+        pickupLocation: "Đồng Nai",
+        deliveryLocation: "TP. Hồ Chí Minh",
+        pickupDate: "2026-10-27",
+        pickupTimeFrom: "20:00",
+        pickupTimeTo: "22:00",
+        deliveryDate: "2026-10-28",
+        deliveryTimeFrom: "04:00",
+        deliveryTimeTo: "07:00",
+        cargoWeightTon: 5,
+        cargoVolumeM3: 12,
+        packageCount: 70,
+        temperatureGroup: "FROZEN" as const,
+        listedPriceVnd: 12_400_000,
+      },
+      {
+        cargoDescription: "Kem đông chờ phân công",
+        pickupLocation: "Long An",
+        deliveryLocation: "Vũng Tàu",
+        pickupDate: "2026-10-28",
+        pickupTimeFrom: "08:00",
+        pickupTimeTo: "10:00",
+        deliveryDate: "2026-10-28",
+        deliveryTimeFrom: "12:00",
+        deliveryTimeTo: "16:00",
+        cargoWeightTon: 2,
+        cargoVolumeM3: 6,
+        packageCount: 30,
+        temperatureGroup: "DEEP_FROZEN" as const,
+        listedPriceVnd: 6_800_000,
+      },
+    ];
+
+    let claimedSampleId: string | null = null;
+    for (const order of awaitingAssignment) {
+      const doc = await Shipment.findOneAndUpdate(
+        { shipperId: shipper._id, cargoDescription: order.cargoDescription },
+        {
+          $set: {
+            ...base,
+            ...order,
+            vehicleRequirement: "Xe lạnh",
+            status: "MATCHED",
+            carrierId: carrier._id,
+            vehicleId: null,
+            driverId: null,
+            events: [
+              {
+                type: "PUBLISHED",
+                occurredAt: hourAgo,
+                actorId: shipper._id,
+                actorRole: "SHIPPER",
+                statusAfter: "PUBLISHED",
+                sequence: 1,
+              },
+              {
+                type: "CLAIMED",
+                occurredAt: now,
+                actorId: carrier._id,
+                actorRole: "CARRIER",
+                statusBefore: "PUBLISHED",
+                statusAfter: "MATCHED",
+                sequence: 2,
+              },
+            ],
+          },
+        },
+        { upsert: true, returnDocument: "after" },
+      );
+      if (!claimedSampleId && doc) claimedSampleId = doc._id.toString();
+    }
 
     const waiting = await Shipment.findOneAndUpdate(
       { shipperId: shipper._id, cargoDescription: "Rau củ lạnh mát chờ lấy hàng" },
@@ -403,7 +461,7 @@ try {
       cargoDescription: {
         $in: [
           ...published.map((order) => order.cargoDescription),
-          "Hải sản đông lạnh chờ phân công",
+          ...awaitingAssignment.map((order) => order.cargoDescription),
           "Rau củ lạnh mát chờ lấy hàng",
           "Thịt bò đông lạnh đang trên đường",
           "Sữa chua lạnh đã giao",
@@ -448,7 +506,9 @@ try {
       }
     }
 
-    console.log(`Seeded marketplace and driver trips on ${databaseName}. Claimed order ${claimed?._id.toString() ?? "missing"}.`);
+    console.log(
+      `Seeded marketplace and driver trips on ${databaseName}. ${awaitingAssignment.length} trips awaiting assignment. Sample ${claimedSampleId ?? "missing"}.`,
+    );
   }
 } finally {
   await disconnectDatabase();

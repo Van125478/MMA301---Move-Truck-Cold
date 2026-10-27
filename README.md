@@ -140,7 +140,7 @@ npm run seed:demo
 npm run seed:fleet
 ```
 
-Thành công khi thấy `Created demo SHIPPER account shipper.demo@coldi.local.` và `Prepared one demo vehicle and linked the demo driver to the demo carrier.` Nếu tài khoản đã có từ trước, dòng sẽ là `Kept existing SHIPPER account ... Password was not changed.`
+Thành công khi thấy `Created demo SHIPPER account shipper.demo@coldi.local.` và log fleet có `Prepared demo fleet: 1 primary + 5 extra drivers`. Nếu tài khoản đã có từ trước, dòng sẽ là `Kept existing SHIPPER account ... Password was not changed.`
 
 Đăng nhập bằng email trong bảng và đúng chữ sau dấu `=` của biến mật khẩu cùng hàng. Gõ nguyên tên biến, ví dụ `DEMO_SHIPPER_PASSWORD`, thì API trả câu sai mật khẩu.
 
@@ -148,7 +148,8 @@ Thành công khi thấy `Created demo SHIPPER account shipper.demo@coldi.local.`
 | --- | --- | --- |
 | `shipper.demo@coldi.local` | `DEMO_SHIPPER_PASSWORD` | Chủ hàng |
 | `carrier.demo@coldi.local` | `DEMO_CARRIER_PASSWORD` | Nhà xe |
-| `driver.demo@coldi.local` | `DEMO_DRIVER_PASSWORD` | Tài xế |
+| `driver.demo@coldi.local` | `DEMO_DRIVER_PASSWORD` | Tài xế (chính) |
+| `driver2.demo@coldi.local` … `driver6.demo@coldi.local` | `DEMO_DRIVER_PASSWORD` | Tài xế thêm (sau `seed:fleet`) |
 | `admin.demo@coldi.local` | `DEMO_ADMIN_PASSWORD` | Quản trị |
 
 ## 3. Bắt đầu app mobile

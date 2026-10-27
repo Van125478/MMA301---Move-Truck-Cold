@@ -47,6 +47,11 @@ export function withoutFavorite(items: readonly FavoriteRecord[], id: string): F
   return items.filter((item) => item.id !== id);
 }
 
+export function withoutFavorites(items: readonly FavoriteRecord[], ids: ReadonlySet<string>): FavoriteRecord[] {
+  if (ids.size === 0) return [...items];
+  return items.filter((item) => !ids.has(item.id));
+}
+
 function parseList(raw: string | null): FavoriteRecord[] {
   if (!raw) return [];
   try {

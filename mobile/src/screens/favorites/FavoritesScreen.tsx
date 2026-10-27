@@ -1,11 +1,12 @@
-import { useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { FlatList, Pressable, StyleSheet, Text, View } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { ConfirmDialog, EmptyState, LoadingBlock } from "../../components/common/Feedback";
+import { SelectCircle } from "../../components/common/SelectCircle";
 import { ShipmentCard } from "../../components/shipment/ShipmentCard";
 import { pointer } from "../../constants/hit";
-import { radius, space, type, useTheme } from "../../constants/theme";
+import { space, type, useTheme } from "../../constants/theme";
 import { useFavorites } from "../../features/favorites/FavoritesProvider";
 import { favoriteFrom } from "../../features/favorites/store";
 import type { RootStackParamList } from "../../navigation/types";
@@ -15,7 +16,7 @@ export function FavoritesScreen({
   onOpenDetail,
   kicker,
   title = "Yêu thích",
-  lede = "Đơn và chuyến bạn đã lưu trên máy này.",
+  lede = "Bấm trái tim để xóa một mục. Chỉnh sửa để chọn và xóa nhiều mục.",
 }: {
   onOpenDetail?: (id: string) => void;
   kicker?: string;
@@ -25,17 +26,55 @@ export function FavoritesScreen({
   const { colors } = useTheme();
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const favorites = useFavorites();
-  const [confirmClear, setConfirmClear] = useState(false);
-  const [clearing, setClearing] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [editMode, setEditMode] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(() => new Set());
+
+  const exitEditMode = useCallback(() => {
+    setEditMode(false);
+    setSelectedIds(new Set());
+  }, []);
+
+  const toggleSelected = useCallback((id: string) => {
+    setSelectedIds((current) => {
+      const next = new Set(current);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }, []);
+
+  const openDetail = useCallback(
+    (id: string) => {
+      if (onOpenDetail) onOpenDetail(id);
+      else navigation.navigate("ShipmentDetail", { id });
+    },
+    [navigation, onOpenDetail],
+  );
+
+  const itemCount = favorites.items.length;
+  const selectedCount = selectedIds.size;
+  const allSelected = itemCount > 0 && selectedCount === itemCount;
+
+  const toggleSelectAll = useCallback(() => {
+    if (allSelected) {
+      setSelectedIds(new Set());
+      return;
+    }
+    setSelectedIds(new Set(favorites.items.map((item) => item.id)));
+  }, [allSelected, favorites.items]);
+
+  const listBottomPad = useMemo(() => (editMode && itemCount > 0 ? 160 : 96), [editMode, itemCount]);
 
   if (!favorites.ready) return <LoadingBlock label="Đang mở danh sách yêu thích" />;
 
   return (
-    <>
+    <View style={styles.fill}>
       <FlatList
         data={favorites.items}
         keyExtractor={(item) => item.id}
-        contentContainerStyle={styles.list}
+        contentContainerStyle={[styles.list, { paddingBottom: listBottomPad }]}
         style={styles.fill}
         ListHeaderComponent={
           <View style={styles.header}>
@@ -44,57 +83,108 @@ export function FavoritesScreen({
                 {kicker}
               </Text>
             ) : null}
-            <Text accessibilityRole="header" maxFontSizeMultiplier={kicker ? 1.35 : 1.4} style={[kicker ? styles.displayTitle : styles.title, { color: colors.ink }]}>
-              {title}
-            </Text>
-            <Text maxFontSizeMultiplier={1.5} style={[styles.lede, { color: colors.muted }]}>
-              {lede}
-            </Text>
-            {favorites.items.length > 0 ? (
-              <Pressable
-                accessibilityRole="button"
-                accessibilityLabel="Xóa tất cả yêu thích"
-                onPress={() => setConfirmClear(true)}
-                style={[styles.clearAll, pointer, { borderColor: colors.line, backgroundColor: colors.surface }]}
+            <View style={styles.titleRow}>
+              <Text
+                accessibilityRole="header"
+                maxFontSizeMultiplier={kicker ? 1.35 : 1.4}
+                style={[kicker ? styles.displayTitle : styles.title, styles.titleFlex, { color: colors.ink }]}
               >
-                <Text style={[styles.clearAllText, { color: colors.danger }]}>Xóa tất cả yêu thích</Text>
-              </Pressable>
-            ) : null}
+                {title} ({itemCount})
+              </Text>
+              {itemCount > 0 ? (
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel={editMode ? "Xong chỉnh sửa" : "Chỉnh sửa danh sách yêu thích"}
+                  onPress={() => (editMode ? exitEditMode() : setEditMode(true))}
+                  style={[styles.editLink, pointer]}
+                >
+                  <Text style={[styles.editLinkText, { color: colors.primary }]}>{editMode ? "Xong" : "Chỉnh sửa"}</Text>
+                </Pressable>
+              ) : null}
+            </View>
+            <Text maxFontSizeMultiplier={1.5} style={[styles.lede, { color: colors.muted }]}>
+              {editMode ? "Chọn mục cần xóa, rồi bấm Xóa ở thanh dưới." : lede}
+            </Text>
           </View>
         }
         renderItem={({ item }) => {
           const shipment = snapshotShipment(item);
+          const selected = selectedIds.has(item.id);
           return (
-            <ShipmentCard
-              shipment={shipment}
-              saved
-              onOpen={() => (onOpenDetail ? onOpenDetail(item.id) : navigation.navigate("ShipmentDetail", { id: item.id }))}
-              onToggleFavorite={() => void favorites.remove(item.id)}
-            />
+            <View style={styles.itemRow}>
+              {editMode ? (
+                <SelectCircle
+                  selected={selected}
+                  onPress={() => toggleSelected(item.id)}
+                  label={`Chọn ${item.cargoDescription}`}
+                />
+              ) : null}
+              <View style={styles.cardWrap}>
+                <ShipmentCard
+                  shipment={shipment}
+                  saved
+                  onOpen={() => (editMode ? toggleSelected(item.id) : openDetail(item.id))}
+                  onToggleFavorite={editMode ? undefined : () => void favorites.remove(item.id)}
+                />
+              </View>
+            </View>
           );
         }}
         ItemSeparatorComponent={() => <View style={kicker ? styles.gapWide : styles.gap} />}
         ListEmptyComponent={<EmptyState title="Chưa có mục yêu thích" body="Bấm trái tim trên đơn hoặc chuyến đang xem được. Mỗi mã chỉ lưu một lần." />}
       />
+
+      {editMode && itemCount > 0 ? (
+        <View style={[styles.bottomBar, { backgroundColor: colors.surface, borderTopColor: colors.line }]}>
+          <View style={styles.selectAll}>
+            <SelectCircle inline selected={allSelected} onPress={toggleSelectAll} label="Chọn tất cả" />
+            <Pressable accessibilityRole="button" accessibilityLabel="Chọn tất cả" onPress={toggleSelectAll} style={pointer}>
+              <Text style={[styles.selectAllText, { color: colors.ink }]}>Tất cả</Text>
+            </Pressable>
+          </View>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Xóa các mục đã chọn"
+            disabled={selectedCount === 0}
+            onPress={() => setConfirmDelete(true)}
+            style={[styles.deleteBtn, pointer, { opacity: selectedCount === 0 ? 0.45 : 1 }]}
+          >
+            <Text style={[styles.deleteBtnText, { color: colors.danger }]}>
+              Xóa{selectedCount > 0 ? ` (${selectedCount})` : ""}
+            </Text>
+          </Pressable>
+        </View>
+      ) : null}
+
       <ConfirmDialog
-        visible={confirmClear}
-        title="Xóa tất cả yêu thích?"
-        body="Danh sách trên máy này sẽ trống. Thao tác này không hủy đơn trên máy chủ."
-        confirmLabel="Xóa tất cả"
+        visible={confirmDelete}
+        title={
+          selectedCount === itemCount
+            ? "Xóa tất cả yêu thích?"
+            : selectedCount === 1
+              ? "Xóa 1 mục yêu thích?"
+              : `Xóa ${selectedCount} mục yêu thích?`
+        }
+        body="Các mục đã chọn sẽ bị gỡ khỏi danh sách trên máy này. Đơn trên máy chủ không bị hủy."
+        confirmLabel="Xóa"
         tone="danger"
-        pending={clearing}
+        pending={deleting}
         onCancel={() => {
-          if (!clearing) setConfirmClear(false);
+          if (!deleting) setConfirmDelete(false);
         }}
         onConfirm={() => {
-          setClearing(true);
-          void favorites
-            .clearAll()
-            .then(() => setConfirmClear(false))
-            .finally(() => setClearing(false));
+          setDeleting(true);
+          const ids = new Set(selectedIds);
+          const wipeAll = ids.size === itemCount;
+          void (wipeAll ? favorites.clearAll() : favorites.removeMany(ids))
+            .then(() => {
+              setConfirmDelete(false);
+              exitEditMode();
+            })
+            .finally(() => setDeleting(false));
         }}
       />
-    </>
+    </View>
   );
 }
 
@@ -139,23 +229,36 @@ function snapshotShipment(item: ReturnType<typeof favoriteFrom>): Shipment {
 }
 
 const styles = StyleSheet.create({
-  list: { padding: space.lg, paddingBottom: 96, flexGrow: 1 },
+  fill: { flex: 1 },
+  list: { padding: space.lg, flexGrow: 1 },
   header: { gap: space.md, marginBottom: space.lg },
   kicker: { fontFamily: "Inter_600SemiBold", fontSize: 13, lineHeight: 18, letterSpacing: 0.4 },
   displayTitle: { ...type.display },
   title: { ...type.screenTitle },
+  titleRow: { flexDirection: "row", alignItems: "flex-start", gap: space.sm },
+  titleFlex: { flex: 1, minWidth: 0 },
+  editLink: { minHeight: 44, justifyContent: "center", paddingHorizontal: space.xs },
+  editLinkText: { fontFamily: "Inter_600SemiBold", fontSize: 15, lineHeight: 22 },
   lede: { ...type.body },
-  clearAll: {
-    alignSelf: "flex-start",
-    minHeight: 44,
-    borderWidth: 1,
-    borderRadius: radius.control,
-    paddingHorizontal: space.lg,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  clearAllText: { fontFamily: "Inter_600SemiBold", fontSize: 14, lineHeight: 20 },
+  itemRow: { flexDirection: "row", alignItems: "flex-start", gap: space.xs },
+  cardWrap: { flex: 1, minWidth: 0 },
   gap: { height: space.md },
   gapWide: { height: space.lg },
-  fill: { flex: 1 },
+  bottomBar: {
+    position: "absolute",
+    left: 0,
+    right: 0,
+    bottom: 0,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    borderTopWidth: StyleSheet.hairlineWidth,
+    paddingHorizontal: space.lg,
+    paddingVertical: space.md,
+    minHeight: 56,
+  },
+  selectAll: { flexDirection: "row", alignItems: "center", gap: space.xs, minHeight: 44 },
+  selectAllText: { fontFamily: "Inter_600SemiBold", fontSize: 15, lineHeight: 22 },
+  deleteBtn: { minHeight: 44, alignItems: "center", justifyContent: "center", paddingHorizontal: space.md },
+  deleteBtnText: { fontFamily: "Inter_700Bold", fontSize: 16, lineHeight: 22 },
 });
