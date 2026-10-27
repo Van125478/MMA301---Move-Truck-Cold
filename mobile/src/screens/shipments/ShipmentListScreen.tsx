@@ -1,3 +1,5 @@
+import { useNavigation } from "@react-navigation/native";
+import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { ActivityIndicator, FlatList, RefreshControl, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -6,12 +8,13 @@ import { PrimaryButton } from "../../components/common/PrimaryButton";
 import { space, type as textType, useTheme } from "../../constants/theme";
 import { useAuth } from "../../features/auth/AuthProvider";
 import { useMyShipments, type ShipmentListErrorKind } from "../../features/shipments/useMyShipments";
-import type { Shipment } from "../../types/shipment";
+import type { RootStackParamList } from "../../navigation/types";
 
 const errorIconByKind: Record<ShipmentListErrorKind, keyof typeof MaterialCommunityIcons.glyphMap> = {
   network: "wifi-off",
   session: "lock-outline",
   forbidden: "shield-alert-outline",
+  notFound: "file-search-outline",
   server: "alert-circle-outline",
 };
 
@@ -19,12 +22,14 @@ const errorTitleByKind: Record<ShipmentListErrorKind, string> = {
   network: "Mất kết nối",
   session: "Hết phiên đăng nhập",
   forbidden: "Không có quyền truy cập",
+  notFound: "Không tìm thấy",
   server: "Máy chủ gặp lỗi",
 };
 
-export function ShipmentListScreen({ onOpenShipment }: { onOpenShipment?: (shipment: Shipment) => void }) {
+export function ShipmentListScreen() {
   const { colors } = useTheme();
   const { logout } = useAuth();
+  const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const { state, refreshing, refresh, reload } = useMyShipments();
 
   if (state.status === "loading") {
@@ -77,7 +82,7 @@ export function ShipmentListScreen({ onOpenShipment }: { onOpenShipment?: (shipm
         keyExtractor={(item) => item.id}
         contentContainerStyle={isEmpty ? styles.emptyList : styles.list}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => void refresh()} tintColor={colors.primary} />}
-        renderItem={({ item }) => <ShipmentCard shipment={item} onPress={() => onOpenShipment?.(item)} />}
+        renderItem={({ item }) => <ShipmentCard shipment={item} onPress={() => navigation.navigate("ShipmentDetail", { id: item.id })} />}
         ListEmptyComponent={
           <View accessibilityRole="text" style={styles.emptyState}>
             <View style={[styles.emptyIconWrap, { backgroundColor: colors.badge }]}>

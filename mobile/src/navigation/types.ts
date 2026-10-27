@@ -6,4 +6,5 @@ export type RootStackParamList = {
   ChangePassword: undefined;
   Home: undefined;
   ShipmentList: undefined;
+  ShipmentDetail: { id: string };
 };
