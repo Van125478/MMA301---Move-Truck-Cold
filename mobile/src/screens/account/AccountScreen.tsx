@@ -1,10 +1,11 @@
 import { useCallback, useState } from "react";
 import { useFocusEffect } from "@react-navigation/native";
-import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { elevatedCard, panelChrome, space, useTheme } from "../../constants/theme";
 import { useAuth } from "../../features/auth/AuthProvider";
-import { choosePlan, loadCatalog, loadPlan, type CatalogPlan, type PlanSummary } from "../../services/api/operations";
+import { ConfirmDialog } from "../../components/common/Feedback";
+import { choosePlan, loadCatalog, loadPlan, releasePlan, type CatalogPlan, type PlanSummary } from "../../services/api/operations";
 import { ApiError } from "../../services/api/client";
 import { FleetScreen } from "../fleet/FleetScreen";
 import { PrimaryButton } from "../../components/common/PrimaryButton";
@@ -35,6 +36,9 @@ export function AccountScreen() {
   const [catalog, setCatalog] = useState<CatalogPlan[]>([]);
   const [planError, setPlanError] = useState<string | null>(null);
   const [buying, setBuying] = useState<string | null>(null);
+  const [viewed, setViewed] = useState<CatalogPlan | null>(null);
+  const [confirmPlan, setConfirmPlan] = useState<CatalogPlan | null>(null);
+  const [releaseAsk, setReleaseAsk] = useState(false);
   const load = useCallback(async () => {
     if (session.status !== "authenticated" || session.user.role === "DRIVER" || session.user.role === "ADMIN") return;
     try {
@@ -75,6 +79,11 @@ export function AccountScreen() {
                 {plan.activeVehicleCount}/{plan.vehicleCap} xe đang dùng{plan.overLimit ? ". Vượt trần, chưa nhận thêm chuyến mới." : "."}
               </Text>
             ) : null}
+            {!plan.code.endsWith("-free") && plan.priceVnd > 0 ? (
+              <Pressable accessibilityRole="button" accessibilityLabel="Hủy gói demo" onPress={() => setReleaseAsk(true)} style={[styles.release, { borderColor: colors.danger }]}>
+                <Text style={[styles.releaseText, { color: colors.danger }]}>Hủy gói demo</Text>
+              </Pressable>
+            ) : null}
           </View>
         ) : null}
         <Text style={[styles.body, { color: colors.muted }]}>
@@ -91,31 +100,23 @@ export function AccountScreen() {
           {catalog.map((item) => {
             const current = plan?.code === item.code;
             return (
-              <View key={item.code} style={[styles.planCard, elevatedCard(colors), current ? { borderColor: colors.primary, borderWidth: 1.5 } : null]}>
+              <Pressable
+                key={item.code}
+                accessibilityRole="button"
+                accessibilityLabel={`Xem chi tiết gói ${item.name}`}
+                onPress={() => setViewed(item)}
+                style={[styles.planCard, elevatedCard(colors), current ? { borderColor: colors.primary, borderWidth: 1.5 } : null]}
+              >
                 <View style={styles.planTop}>
                   <Text style={[styles.planName, { color: colors.ink }]}>{item.name}</Text>
                   <Text style={[styles.planPrice, { color: colors.primary }]}>{item.listPriceLabel || "0 VND"}</Text>
                 </View>
                 <Text style={[styles.sectionNote, { color: colors.muted }]}>
-                  {item.vehicleCap == null ? "Không giới hạn xe" : `Tối đa ${item.vehicleCap} xe đang dùng`}
+                  {cycleLabel(item.billingCycle)}
                   {current ? " · Đang dùng" : ""}
                 </Text>
-                {current ? null : (
-                  <PrimaryButton
-                    spaced={false}
-                    label={buying === item.code ? "Đang chọn…" : "Chọn gói này"}
-                    pending={buying === item.code}
-                    onPress={() => {
-                      setBuying(item.code);
-                      setPlanError(null);
-                      void choosePlan(item.code)
-                        .then(() => load())
-                        .catch((caught) => setPlanError(caught instanceof ApiError ? caught.message : "Môi trường này chưa mở mua gói."))
-                        .finally(() => setBuying(null));
-                    }}
-                  />
-                )}
-              </View>
+                <Text style={[styles.link, { color: colors.primary }]}>Xem chi tiết</Text>
+              </Pressable>
             );
           })}
         </View>
@@ -135,7 +136,93 @@ export function AccountScreen() {
       >
         <Text style={[styles.logoutText, { color: colors.ink }]}>{leaving ? "Đang đăng xuất…" : "Đăng xuất"}</Text>
       </Pressable>
+      <Modal visible={viewed !== null} transparent animationType="fade" onRequestClose={() => setViewed(null)}>
+        <View style={styles.backdrop}>
+          <View style={[styles.sheet, { backgroundColor: colors.surface }]}>
+            {viewed ? (
+              <>
+                <Text accessibilityRole="header" style={[styles.sheetTitle, { color: colors.ink }]}>{viewed.name}</Text>
+                <Fact label="Giá niêm yết" value={viewed.listPriceLabel || "0 VND"} />
+                <Fact label="Kỳ hạn" value={cycleLabel(viewed.billingCycle)} />
+                <Fact label="Trần xe đang dùng" value={viewed.vehicleCap == null ? "Không giới hạn" : `${viewed.vehicleCap} xe`} />
+                <Fact label="Phí nền tảng trên cước" value={viewed.rateLabel || "Theo gói"} />
+                <Text style={[styles.sectionNote, { color: colors.muted }]}>Xem chi tiết không đăng ký gói. Bấm Đóng để thoát.</Text>
+                <View style={styles.sheetRow}>
+                  <Pressable accessibilityRole="button" accessibilityLabel="Đóng" onPress={() => setViewed(null)} style={[styles.sheetButton, { borderColor: colors.line }]}>
+                    <Text style={[styles.releaseText, { color: colors.ink }]}>Đóng</Text>
+                  </Pressable>
+                  {plan?.code === viewed.code ? null : (
+                    <Pressable
+                      accessibilityRole="button"
+                      accessibilityLabel="Đăng ký gói"
+                      onPress={() => {
+                        setConfirmPlan(viewed);
+                        setViewed(null);
+                      }}
+                      style={[styles.sheetButton, { borderColor: colors.primary, backgroundColor: colors.primary }]}
+                    >
+                      <Text style={[styles.releaseText, { color: colors.onPrimary }]}>Đăng ký gói</Text>
+                    </Pressable>
+                  )}
+                </View>
+              </>
+            ) : null}
+          </View>
+        </View>
+      </Modal>
+      <ConfirmDialog
+        visible={confirmPlan !== null}
+        title={confirmPlan ? `Đăng ký ${confirmPlan.name}?` : "Đăng ký gói?"}
+        body="Bấm Đóng nếu chưa muốn đăng ký. Gói chỉ kích hoạt sau khi xác nhận."
+        confirmLabel={buying ? "Đang đăng ký…" : "Xác nhận"}
+        pending={buying !== null}
+        onCancel={() => {
+          if (!buying) setConfirmPlan(null);
+        }}
+        onConfirm={() => {
+          if (!confirmPlan) return;
+          setBuying(confirmPlan.code);
+          setPlanError(null);
+          void choosePlan(confirmPlan.code)
+            .then(() => {
+              setConfirmPlan(null);
+              return load();
+            })
+            .catch((caught) => setPlanError(caught instanceof ApiError ? caught.message : "Môi trường này chưa mở mua gói."))
+            .finally(() => setBuying(null));
+        }}
+      />
+      <ConfirmDialog
+        visible={releaseAsk}
+        title="Hủy gói demo?"
+        body="Gói đang dùng sẽ dừng ngay và tài khoản về Free, để bạn đăng ký gói khác khi demo."
+        confirmLabel="Hủy gói"
+        tone="danger"
+        onCancel={() => setReleaseAsk(false)}
+        onConfirm={() => {
+          setReleaseAsk(false);
+          void releasePlan()
+            .then(() => load())
+            .catch((caught) => setPlanError(caught instanceof ApiError ? caught.message : "Không nhả được gói."));
+        }}
+      />
     </ScrollView>
+  );
+}
+
+function cycleLabel(cycle: string): string {
+  if (cycle === "MONTH") return "Theo tháng";
+  if (cycle === "YEAR") return "Theo năm";
+  return "Không kỳ hạn";
+}
+
+function Fact({ label, value }: { label: string; value: string }) {
+  const { colors } = useTheme();
+  return (
+    <View style={styles.fact}>
+      <Text style={[styles.factLabel, { color: colors.muted }]}>{label}</Text>
+      <Text style={[styles.factValue, { color: colors.ink }]}>{value}</Text>
+    </View>
   );
 }
 
@@ -157,6 +244,17 @@ const styles = StyleSheet.create({
   planTop: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", gap: space.sm },
   planName: { flex: 1, fontFamily: "Inter_700Bold", fontSize: 16, lineHeight: 22 },
   planPrice: { fontFamily: "Inter_700Bold", fontSize: 14, lineHeight: 20 },
+  link: { fontFamily: "Inter_600SemiBold", fontSize: 14, lineHeight: 20 },
+  release: { minHeight: 44, borderWidth: 1, borderRadius: 12, alignItems: "center", justifyContent: "center" },
+  releaseText: { fontFamily: "Inter_600SemiBold", fontSize: 15, lineHeight: 22 },
+  backdrop: { flex: 1, backgroundColor: "rgba(15, 23, 42, 0.48)", justifyContent: "flex-end", padding: space.lg },
+  sheet: { borderRadius: 20, padding: space.xl, gap: space.md },
+  sheetTitle: { fontFamily: "Inter_700Bold", fontSize: 22, lineHeight: 30 },
+  sheetRow: { flexDirection: "row", gap: space.sm },
+  sheetButton: { flex: 1, minHeight: 48, borderWidth: 1, borderRadius: 12, alignItems: "center", justifyContent: "center" },
+  fact: { gap: 2 },
+  factLabel: { fontFamily: "Inter_500Medium", fontSize: 13, lineHeight: 18 },
+  factValue: { fontFamily: "Inter_600SemiBold", fontSize: 16, lineHeight: 22 },
   logout: { minHeight: 52, marginTop: space.xxl, borderWidth: 1, borderRadius: 12, alignItems: "center", justifyContent: "center" },
   logoutText: { fontFamily: "Inter_600SemiBold", fontSize: 16, lineHeight: 24 },
 });

@@ -54,6 +54,8 @@ export type PlanSummary = {
   overLimit: boolean;
   endsAt: string | null;
   note: string;
+  demo: boolean;
+  scheduledDowngradeAt: string | null;
 };
 
 export type CatalogPlan = {
@@ -63,6 +65,7 @@ export type CatalogPlan = {
   listPriceLabel: string;
   vehicleCap: number | null;
   billingCycle: string;
+  rateLabel: string;
 };
 
 export async function loadPlan(): Promise<PlanSummary> {
@@ -78,6 +81,8 @@ export async function loadPlan(): Promise<PlanSummary> {
     overLimit: rights.overLimit === true,
     endsAt: typeof plan.endsAt === "string" ? plan.endsAt : null,
     note: typeof plan.label === "string" ? plan.label : "Gói này chưa thu tiền trên app.",
+    demo: plan.demo === true,
+    scheduledDowngradeAt: typeof plan.scheduledDowngradeAt === "string" ? plan.scheduledDowngradeAt : null,
   };
 }
 
@@ -146,8 +151,17 @@ export async function loadCatalog(audience: "SHIPPER" | "CARRIER"): Promise<Cata
       listPriceLabel: typeof row.listPriceLabel === "string" ? row.listPriceLabel : "",
       vehicleCap: typeof row.vehicleCap === "number" ? row.vehicleCap : null,
       billingCycle: typeof row.billingCycle === "string" ? row.billingCycle : "",
+      rateLabel: typeof row.rateLabel === "string" ? row.rateLabel : "",
     }];
   });
+}
+
+/** Kết thúc gói demo ngay, tài khoản về Free để demo lại. */
+export function releasePlan(): Promise<void> {
+  return authed("/api/packages/my-plan/demo-end", {
+    method: "POST",
+    body: { idempotencyKey: operationKey() },
+  }).then(() => undefined);
 }
 
 export function choosePlan(planCode: string): Promise<void> {
