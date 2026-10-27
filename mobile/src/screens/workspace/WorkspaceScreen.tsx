@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from "react";
+import { useMemo, useState, type ReactNode } from "react";
 import { StyleSheet, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { PhoneFrame } from "../../components/common/PhoneFrame";
@@ -6,10 +6,12 @@ import { ScreenTopBar } from "../../components/layout/ScreenTopBar";
 import { TabBar, type TabItem } from "../../components/navigation/TabBar";
 import { space, useTheme } from "../../constants/theme";
 import { useAuth } from "../../features/auth/AuthProvider";
+import { useFavorites } from "../../features/favorites/FavoritesProvider";
 import type { UserRole } from "../../types/auth";
 import { AccountScreen } from "../account/AccountScreen";
 import { FavoritesScreen } from "../favorites/FavoritesScreen";
 import { CreateOrderScreen } from "../shipments/CreateOrderScreen";
+import { ClaimedTripsScreen } from "../shipments/ClaimedTripsScreen";
 import { OrderListScreen } from "../shipments/OrderListScreen";
 import { ShipmentDetailPanel } from "../shipments/ShipmentDetailScreen";
 
@@ -35,6 +37,10 @@ const driverTabs: TabItem[] = [
 
 const adminTabs: TabItem[] = [{ id: "account", label: "Tài khoản", icon: "account-outline" }];
 
+function tabsWithSavedBadge(items: readonly TabItem[], savedCount: number): TabItem[] {
+  return items.map((item) => (item.id === "saved" ? { ...item, badgeCount: savedCount } : item));
+}
+
 function Pane({ visible, children }: { visible: boolean; children: ReactNode }) {
   return (
     <View
@@ -51,8 +57,14 @@ function Pane({ visible, children }: { visible: boolean; children: ReactNode }) 
 export function WorkspaceScreen() {
   const { colors } = useTheme();
   const { session } = useAuth();
+  const favorites = useFavorites();
   const role = session.status === "authenticated" ? session.user.role : "SHIPPER";
-  const tabs = role === "CARRIER" ? carrierTabs : role === "DRIVER" ? driverTabs : role === "ADMIN" ? adminTabs : shipperTabs;
+  const savedCount = favorites.ready ? favorites.items.length : 0;
+  const tabs = useMemo(() => {
+    const base = role === "CARRIER" ? carrierTabs : role === "DRIVER" ? driverTabs : role === "ADMIN" ? adminTabs : shipperTabs;
+    if (role === "ADMIN") return base;
+    return tabsWithSavedBadge(base, savedCount);
+  }, [role, savedCount]);
   const [tab, setTab] = useState(tabs[0]?.id ?? "account");
   const [detailId, setDetailId] = useState<string | null>(null);
 
@@ -114,14 +126,7 @@ export function WorkspaceScreen() {
             ) : null}
             {role === "CARRIER" ? (
               <Pane visible={!detailId && tab === "claimed"}>
-                <OrderListScreen
-                  mode="claimed"
-                  title="Chuyến đã nhận"
-                  lede="Chuyến nhà xe này đã nhận. Phân công xe và tài xế trong chi tiết."
-                  emptyTitle="Chưa nhận chuyến"
-                  emptyBody="Vào sàn chuyến để nhận đơn đang tìm xe."
-                  onOpenDetail={openDetailProp}
-                />
+                <ClaimedTripsScreen onOpenDetail={openDetailProp} />
               </Pane>
             ) : null}
             {role === "DRIVER" ? (

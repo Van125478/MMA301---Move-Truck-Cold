@@ -53,6 +53,7 @@ Lấy mật khẩu trong `server\.env`. Mỗi biến `DEMO_*_PASSWORD` đi với
 | `shipper.demo@coldi.local` | `DEMO_SHIPPER_PASSWORD` | Chủ hàng |
 | `carrier.demo@coldi.local` | `DEMO_CARRIER_PASSWORD` | Nhà xe |
 | `driver.demo@coldi.local` | `DEMO_DRIVER_PASSWORD` | Tài xế |
+| `driver2.demo@coldi.local` … `driver6.demo@coldi.local` | `DEMO_DRIVER_PASSWORD` | Tài xế (sau `npm run seed:fleet`) |
 | `admin.demo@coldi.local` | `DEMO_ADMIN_PASSWORD` | Quản trị |
 
 ## 4. Bấm theo thứ tự
