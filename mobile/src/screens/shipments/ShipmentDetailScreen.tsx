@@ -35,6 +35,7 @@ import { ShipmentLocationSection } from "../../components/shipment/ShipmentLocat
 import { ShipmentTimelineSection } from "../../components/shipment/ShipmentTimelineSection";
 import { cargoHeroImage } from "../../utils/cargoHeroImage";
 import { formatVnd, formatWindow } from "../../utils/format";
+import { carrierAssignmentSummary, needsCarrierAssignment } from "../../utils/shipmentDisplay";
 import { ReviewSection } from "../../components/shipment/ReviewSection";
 import { ShipmentChat } from "../../components/shipment/ShipmentChat";
 import { ShipmentIncidents } from "../../components/shipment/ShipmentIncidents";
@@ -151,7 +152,10 @@ function ShipmentDetailBody({
       if (action === "assign") {
         setVehicleId(null);
         setDriverId(null);
+        setVehicles([]);
+        setDrivers([]);
         setAssignmentSuccess(next);
+        await load();
       }
       if (role === "DRIVER" && action === "pickup" && next.status === "IN_TRANSIT") startLiveShare(next.id);
       if (role === "DRIVER" && action === "delivery") stopLiveShare();
@@ -190,6 +194,7 @@ function ShipmentDetailBody({
   const canPickup = role === "DRIVER" && shipment.nextAction === "pickup";
   const canDeliver = role === "DRIVER" && shipment.nextAction === "delivery";
   const saved = favorites.has(shipment.id);
+  const assignedSummary = carrierAssignmentSummary(shipment);
 
   const chrome = (
     <>
@@ -215,6 +220,15 @@ function ShipmentDetailBody({
           />
           <View style={styles.heroBody}>
             <StatusPill status={shipment.status} label={shipment.statusLabel} />
+            {assignedSummary ? (
+              <Text maxFontSizeMultiplier={1.3} style={[styles.assignBanner, { color: colors.success, backgroundColor: colors.successBg }]}>
+                {assignedSummary}
+              </Text>
+            ) : needsCarrierAssignment(shipment) && role === "CARRIER" ? (
+              <Text maxFontSizeMultiplier={1.3} style={[styles.assignBanner, { color: colors.primary, backgroundColor: colors.badge }]}>
+                Chưa phân công xe và tài xế
+              </Text>
+            ) : null}
             <Text accessibilityRole="header" maxFontSizeMultiplier={1.4} style={[styles.title, { color: colors.ink }]}>
               {shipment.cargoDescription}
             </Text>
@@ -288,7 +302,10 @@ function ShipmentDetailBody({
         visible={assignmentSuccess !== null}
         shipment={assignmentSuccess}
         onClose={() => setAssignmentSuccess(null)}
-        onViewDetail={() => setAssignmentSuccess(null)}
+        onViewDetail={() => {
+          if (assignmentSuccess) setShipment(assignmentSuccess);
+          setAssignmentSuccess(null);
+        }}
       />
       <ConfirmDialog
         visible={confirm !== null}
@@ -401,6 +418,14 @@ const styles = StyleSheet.create({
   hero: { borderWidth: 1, borderRadius: radius.card, overflow: "hidden" },
   heroPhoto: { width: "100%", height: 200 },
   heroBody: { padding: space.lg, gap: space.sm },
+  assignBanner: {
+    fontFamily: "Inter_600SemiBold",
+    fontSize: 13,
+    lineHeight: 18,
+    paddingHorizontal: space.md,
+    paddingVertical: space.sm,
+    borderRadius: radius.control,
+  },
   title: { fontFamily: "Inter_700Bold", fontSize: 22, lineHeight: 30 },
   route: { fontFamily: "Inter_500Medium", fontSize: 16, lineHeight: 24 },
   priceRow: { marginTop: space.sm, paddingTop: space.md, borderTopWidth: 1, gap: space.xs },

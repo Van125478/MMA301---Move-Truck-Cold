@@ -3,6 +3,7 @@ import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { pointer } from "../../constants/hit";
 import { space, useTheme } from "../../constants/theme";
 import type { Shipment } from "../../types/shipment";
+import { isCarrierAssigned } from "../../utils/shipmentDisplay";
 
 export type ClaimedStatusKey = "assign" | "running" | "done" | "cancelled";
 export type ClaimedViewFilter = ClaimedStatusKey | "all";
@@ -11,7 +12,7 @@ export function claimedBucket(shipment: Shipment): ClaimedStatusKey {
   if (shipment.status === "CANCELLED" || shipment.status === "INCIDENT") return "cancelled";
   if (shipment.status === "DELIVERY_CONFIRMED" || shipment.status === "COMPLETED") return "done";
   if (shipment.status === "PICKUP_CONFIRMED" || shipment.status === "IN_TRANSIT") return "running";
-  if (shipment.status === "MATCHED") return shipment.driverId ? "running" : "assign";
+  if (shipment.status === "MATCHED") return isCarrierAssigned(shipment) ? "running" : "assign";
   return "assign";
 }
 
@@ -36,13 +37,16 @@ export function ClaimedStatusFilters({
   onChange: (id: ClaimedViewFilter) => void;
 }) {
   const { colors } = useTheme();
+  const total = counts.assign + counts.running + counts.done + counts.cancelled;
 
   return (
-    <View style={styles.row}>
-      {filters.map((item) => {
+    <View style={styles.wrap}>
+    <View style={[styles.group, { borderColor: colors.line, backgroundColor: colors.surface }]}>
+      {filters.map((item, index) => {
         const selected = active === item.id;
         const badge = counts[item.id];
         const badgeText = badge > 9 ? "9+" : badge > 0 ? String(badge) : null;
+        const last = index === filters.length - 1;
         return (
           <Pressable
             key={item.id}
@@ -50,10 +54,15 @@ export function ClaimedStatusFilters({
             accessibilityState={{ selected }}
             accessibilityLabel={badgeText ? `${item.label}, ${badge} chuyến` : item.label}
             onPress={() => onChange(selected ? "all" : item.id)}
-            style={[styles.item, pointer]}
+            style={[
+              styles.item,
+              pointer,
+              !last ? { borderRightWidth: StyleSheet.hairlineWidth, borderRightColor: colors.line } : null,
+              selected ? { backgroundColor: colors.badge } : null,
+            ]}
           >
             <View style={styles.iconWrap}>
-              <MaterialCommunityIcons name={item.icon} size={26} color={selected ? colors.primary : colors.ink} />
+              <MaterialCommunityIcons name={item.icon} size={22} color={selected ? colors.primary : colors.ink} />
               {badgeText ? (
                 <View style={[styles.badge, { backgroundColor: colors.danger }]}>
                   <Text maxFontSizeMultiplier={1.05} style={styles.badgeText}>{badgeText}</Text>
@@ -71,30 +80,66 @@ export function ClaimedStatusFilters({
         );
       })}
     </View>
+    {active !== "all" ? (
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel={`Xem tất cả, ${total} chuyến`}
+        onPress={() => onChange("all")}
+        style={[styles.pill, styles.viewAll, pointer, { borderColor: colors.line, backgroundColor: colors.surface }]}
+      >
+        <Text style={[styles.viewAllText, { color: colors.primary }]}>Xem tất cả ({total})</Text>
+        <MaterialCommunityIcons name="chevron-down" size={18} color={colors.primary} />
+      </Pressable>
+    ) : null}
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  row: {
+  wrap: { gap: space.xs, paddingVertical: space.xs },
+  group: {
     flexDirection: "row",
-    alignItems: "flex-start",
-    justifyContent: "space-between",
+    alignItems: "stretch",
     width: "100%",
-    paddingVertical: space.sm,
+    borderWidth: 1,
+    borderRadius: 10,
+    overflow: "hidden",
   },
-  item: { flex: 1, minWidth: 0, alignItems: "center", gap: 6, paddingHorizontal: 2 },
-  iconWrap: { width: 36, height: 36, alignItems: "center", justifyContent: "center" },
+  pill: {
+    borderWidth: 1,
+    borderRadius: 10,
+  },
+  item: {
+    flex: 1,
+    minWidth: 0,
+    alignItems: "center",
+    gap: 3,
+    paddingHorizontal: 2,
+    paddingVertical: space.xs,
+    minHeight: 68,
+    justifyContent: "center",
+  },
+  iconWrap: { width: 28, height: 28, alignItems: "center", justifyContent: "center" },
   badge: {
     position: "absolute",
-    top: -2,
-    right: -6,
-    minWidth: 16,
-    height: 16,
-    borderRadius: 8,
-    paddingHorizontal: 3,
+    top: -4,
+    right: -8,
+    minWidth: 14,
+    height: 14,
+    borderRadius: 7,
+    paddingHorizontal: 2,
     alignItems: "center",
     justifyContent: "center",
   },
-  badgeText: { color: "#FFFFFF", fontFamily: "Inter_700Bold", fontSize: 9, lineHeight: 11 },
-  label: { fontSize: 11, lineHeight: 14, textAlign: "center" },
+  badgeText: { color: "#FFFFFF", fontFamily: "Inter_700Bold", fontSize: 8, lineHeight: 10 },
+  label: { fontSize: 10, lineHeight: 13, textAlign: "center" },
+  viewAll: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 2,
+    minHeight: 38,
+    paddingHorizontal: space.sm,
+  },
+  viewAllText: { fontFamily: "Inter_600SemiBold", fontSize: 13, lineHeight: 18 },
 });

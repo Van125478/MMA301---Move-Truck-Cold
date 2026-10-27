@@ -113,6 +113,16 @@ function text(value: unknown): string | null {
   return trimmed.length === 0 ? null : trimmed;
 }
 
+function objectIdText(value: unknown): string | null {
+  const direct = text(value);
+  if (direct) return direct;
+  if (typeof value === "object" && value !== null && !Array.isArray(value)) {
+    const id = (value as { id?: unknown }).id;
+    if (typeof id === "string") return text(id);
+  }
+  return null;
+}
+
 function requiredText(record: Record<string, unknown>, key: string): string {
   const value = text(record[key]);
   if (!value) throw invalid;
@@ -190,9 +200,9 @@ export function parseShipment(value: unknown): Shipment {
     cargoImageIds: imageIds(record.cargoImages),
     status: status as ShipmentStatus,
     statusLabel: text(record.statusLabel) ?? status,
-    carrierId: text(record.carrierId),
-    vehicleId: text(record.vehicleId),
-    driverId: text(record.driverId),
+    carrierId: objectIdText(record.carrierId),
+    vehicleId: objectIdText(record.vehicleId),
+    driverId: objectIdText(record.driverId),
     vehicleLabel: text(record.vehicleLabel),
     driverName: text(record.driverName),
     pickupConfirmedAt: text(record.pickupConfirmedAt),

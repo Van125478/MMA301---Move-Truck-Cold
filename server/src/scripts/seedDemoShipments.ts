@@ -156,7 +156,7 @@ try {
 
     const awaitingAssignment = [
       {
-        cargoDescription: "Hải sản đông lạnh chờ phân công",
+        cargoDescription: "Hải sản đông lạnh (đơn demo)",
         pickupLocation: "Cần Thơ",
         deliveryLocation: "TP. Hồ Chí Minh",
         pickupDate: "2026-10-28",
@@ -172,7 +172,7 @@ try {
         listedPriceVnd: 18_000_000,
       },
       {
-        cargoDescription: "Sữa tươi lạnh chờ phân công",
+        cargoDescription: "Sữa tươi lạnh (đơn demo)",
         pickupLocation: "Bình Dương",
         deliveryLocation: "Cần Thơ",
         pickupDate: "2026-10-28",
@@ -188,7 +188,7 @@ try {
         listedPriceVnd: 7_500_000,
       },
       {
-        cargoDescription: "Thịt gà đông chờ phân công",
+        cargoDescription: "Thịt gà đông (đơn demo)",
         pickupLocation: "Đồng Nai",
         deliveryLocation: "TP. Hồ Chí Minh",
         pickupDate: "2026-10-27",
@@ -204,7 +204,7 @@ try {
         listedPriceVnd: 12_400_000,
       },
       {
-        cargoDescription: "Kem đông chờ phân công",
+        cargoDescription: "Kem đông (đơn demo)",
         pickupLocation: "Long An",
         deliveryLocation: "Vũng Tàu",
         pickupDate: "2026-10-28",
