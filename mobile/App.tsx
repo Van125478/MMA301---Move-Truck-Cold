@@ -9,6 +9,7 @@ import { StyleSheet, View } from "react-native";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { AppErrorBoundary } from "./src/components/common/AppErrorBoundary";
 import { AuthProvider } from "./src/features/auth/AuthProvider";
+import { FavoritesProvider } from "./src/features/favorites/FavoritesProvider";
 import { RootNavigator } from "./src/navigation/RootNavigator";
 
 export default function App() {
@@ -25,7 +26,9 @@ export default function App() {
     <SafeAreaProvider>
       <AppErrorBoundary>
         <AuthProvider>
-          <RootNavigator />
+          <FavoritesProvider>
+            <RootNavigator />
+          </FavoritesProvider>
         </AuthProvider>
       </AppErrorBoundary>
     </SafeAreaProvider>

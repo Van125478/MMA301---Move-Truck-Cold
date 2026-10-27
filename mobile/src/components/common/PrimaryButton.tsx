@@ -7,9 +7,10 @@ type PrimaryButtonProps = {
   onPress: () => void;
   pending?: boolean;
   disabled?: boolean;
+  spaced?: boolean;
 };
 
-export function PrimaryButton({ label, pendingLabel, onPress, pending = false, disabled = false }: PrimaryButtonProps) {
+export function PrimaryButton({ label, pendingLabel, onPress, pending = false, disabled = false, spaced = true }: PrimaryButtonProps) {
   const { colors } = useTheme();
   const blocked = disabled || pending;
   const text = pending ? (pendingLabel ?? label) : label;
@@ -23,6 +24,7 @@ export function PrimaryButton({ label, pendingLabel, onPress, pending = false, d
       onPress={onPress}
       style={({ pressed }) => [
         styles.button,
+        spaced ? styles.spaced : null,
         {
           backgroundColor: pressed && !blocked ? colors.primaryPressed : colors.primary,
           opacity: disabled && !pending ? 0.55 : 1,
@@ -44,7 +46,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     gap: space.sm,
     paddingHorizontal: space.lg,
-    marginTop: space.xl,
   },
+  spaced: { marginTop: space.xl },
   label: { fontFamily: "Inter_600SemiBold", fontSize: 16, lineHeight: 24 },
 });

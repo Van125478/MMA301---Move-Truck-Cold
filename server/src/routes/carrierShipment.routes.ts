@@ -20,6 +20,7 @@ import { toCarrierShipmentView, toCarrierShipmentViews } from "../shipments/assi
 import { compareMarketplaceShipments, marketplaceFilter, readMarketplaceQuery } from "../shipments/marketplaceQuery.js";
 import { toTrackingDto } from "../gps/trackingView.js";
 import { attachTimeline, shipmentEventUpdate } from "../shipments/shipmentEvents.js";
+import { orderNoticeBody, recordOrderNotice } from "../orders/notices.js";
 
 const forbiddenFields = ["carrierId", "status", "shipperId", "vehicleId", "driverId", "role", "tenantId", "senderId", "rateBps", "calculatedFeeVnd", "planVersionId", "payerAccountId", "commission", "paymentCollected"] as const;
 
@@ -153,6 +154,22 @@ carrierShipmentRouter.post("/:id/claim", requireTrustedOrigin, async (request, r
     }
     if (carrierSnapshot) await rememberEstimated(shipment._id.toString(), carrierSnapshot);
 
+    const claimedBody = orderNoticeBody(shipment.cargoDescription, shipment.pickupLocation, shipment.deliveryLocation);
+    await recordOrderNotice({
+      recipientId: shipment.shipperId.toString(),
+      shipmentId: shipment._id.toString(),
+      kind: "CLAIMED",
+      title: "Đơn đã được nhận",
+      body: claimedBody,
+    });
+    await recordOrderNotice({
+      recipientId: carrierId,
+      shipmentId: shipment._id.toString(),
+      kind: "CLAIMED",
+      title: "Bạn đã nhận chuyến",
+      body: claimedBody,
+    });
+
     await recordSuccessfulAudit({
       action: "SHIPMENT_CLAIMED",
       actorId: carrierId,
@@ -273,6 +290,14 @@ carrierShipmentRouter.post("/:id/assign", requireTrustedOrigin, async (request, 
       }
       throw new HttpError(409, "conflict", "Chuyến chưa sẵn sàng để phân công.");
     }
+
+    await recordOrderNotice({
+      recipientId: input.driverId,
+      shipmentId: shipment._id.toString(),
+      kind: "ASSIGNED",
+      title: "Bạn được giao chuyến",
+      body: orderNoticeBody(shipment.cargoDescription, shipment.pickupLocation, shipment.deliveryLocation),
+    });
 
     await recordSuccessfulAudit({
       action: "SHIPMENT_ASSIGNED",

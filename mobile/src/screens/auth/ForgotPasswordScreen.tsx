@@ -4,6 +4,7 @@ import { useState } from "react";
 import { KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { BrandHeader } from "../../components/brand/Wordmark";
+import { PhoneFrame } from "../../components/common/PhoneFrame";
 import { Field } from "../../components/common/Field";
 import { FieldError } from "../../components/common/FieldError";
 import { PrimaryButton } from "../../components/common/PrimaryButton";
@@ -45,9 +46,10 @@ export function ForgotPasswordScreen() {
 
   return (
     <SafeAreaView style={[styles.safe, { backgroundColor: colors.background }]}>
+      <PhoneFrame>
       <KeyboardAvoidingView style={styles.safe} behavior={Platform.OS === "ios" ? "padding" : undefined}>
         <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={[styles.page, { paddingHorizontal: gutter }]}>
-          <View style={{ width: cardWidth }}>
+          <View style={{ width: cardWidth, alignSelf: "center" }}>
             <BrandHeader />
             <View style={[styles.card, panelChrome(colors)]}>
               <Text accessibilityRole="header" style={[styles.title, { color: colors.ink }]}>
@@ -82,6 +84,7 @@ export function ForgotPasswordScreen() {
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
+      </PhoneFrame>
     </SafeAreaView>
   );
 }

@@ -48,7 +48,7 @@ export function RoleHomeScreen() {
               {role.label}
             </Text>
             <View style={[styles.badge, { backgroundColor: colors.badge }]}>
-              <Text style={[styles.badgeText, { color: colors.badgeInk }]}>Máy chủ trả vai: {user.role}</Text>
+              <Text style={[styles.badgeText, { color: colors.badgeInk }]}>{role.label}</Text>
             </View>
             <Text style={[styles.name, { color: colors.ink }]}>{name}</Text>
             <Text style={[styles.work, { color: colors.muted }]}>{role.work}</Text>
