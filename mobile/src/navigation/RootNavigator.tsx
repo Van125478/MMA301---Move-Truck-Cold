@@ -9,6 +9,7 @@ import { LoginScreen } from "../screens/auth/LoginScreen";
 import { RegisterScreen } from "../screens/auth/RegisterScreen";
 import { ResetPasswordScreen } from "../screens/auth/ResetPasswordScreen";
 import { RoleHomeScreen } from "../screens/home/RoleHomeScreen";
+import { ShipmentDetailScreen } from "../screens/shipments/ShipmentDetailScreen";
 import { ShipmentListScreen } from "../screens/shipments/ShipmentListScreen";
 import { SessionGate } from "../screens/SessionGate";
 import type { RootStackParamList } from "./types";
@@ -66,6 +67,7 @@ export function RootNavigator() {
           <>
             <Stack.Screen name="Home" component={RoleHomeScreen} />
             <Stack.Screen name="ShipmentList" component={ShipmentListScreen} />
+            <Stack.Screen name="ShipmentDetail" component={ShipmentDetailScreen} />
           </>
         )}
       </Stack.Navigator>
