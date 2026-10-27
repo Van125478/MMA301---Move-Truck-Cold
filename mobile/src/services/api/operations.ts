@@ -137,6 +137,18 @@ export function archiveVehicle(id: string): Promise<void> {
   return authed(`/api/carrier/fleet/vehicles/${id}/archive`, { method: "POST", body: {} }).then(() => undefined);
 }
 
+export function restoreVehicle(id: string): Promise<void> {
+  return authed(`/api/carrier/fleet/vehicles/${id}/restore`, { method: "POST", body: {} }).then(() => undefined);
+}
+
+export function pauseDriver(id: string): Promise<void> {
+  return authed(`/api/carrier/fleet/drivers/${id}/lock`, { method: "POST", body: {} }).then(() => undefined);
+}
+
+export function resumeDriver(id: string): Promise<void> {
+  return authed(`/api/carrier/fleet/drivers/${id}/unlock`, { method: "POST", body: {} }).then(() => undefined);
+}
+
 export async function loadCatalog(audience: "SHIPPER" | "CARRIER"): Promise<CatalogPlan[]> {
   const body = await authed<{ plans?: unknown }>("/api/packages/catalog");
   if (!Array.isArray(body.plans)) return [];

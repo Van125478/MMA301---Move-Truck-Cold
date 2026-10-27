@@ -15,6 +15,16 @@ function vehicleTitle(vehicle: FleetVehicle): string {
   return vehicle.plate ? `${vehicle.label} · ${vehicle.plate}` : vehicle.label;
 }
 
+function vehicleStateLabel(vehicle: FleetVehicle): string {
+  if (vehicle.status === "ARCHIVED") return "Tạm dừng";
+  return vehicle.availableForAssignment ? "Rảnh" : "Đang bận";
+}
+
+function driverStateLabel(driver: FleetDriver): string {
+  if (driver.accountStatus === "LOCKED") return "Tạm dừng";
+  return driverReady(driver) ? "Sẵn sàng" : "Chưa phân công được";
+}
+
 function driverReady(driver: FleetDriver): boolean {
   return driver.accountStatus === "ACTIVE" && !driver.mustChangePassword;
 }
@@ -98,7 +108,7 @@ export function CarrierAssignmentSection({
         value={selectedVehicle ? vehicleTitle(selectedVehicle) : "Chọn xe đang rảnh"}
         hint={
           selectedVehicle
-            ? selectedVehicle.availableForAssignment ? "Đang rảnh" : "Đang bận"
+            ? vehicleStateLabel(selectedVehicle)
             : vehicles.length > 0
               ? `${availableVehicleCount} rảnh / ${vehicles.length} xe`
               : "Chưa có xe"
@@ -114,7 +124,7 @@ export function CarrierAssignmentSection({
         value={selectedDriver ? selectedDriver.name : vehicleId ? "Chọn tài xế" : "Chọn xe trước"}
         hint={
           selectedDriver
-            ? "Sẵn sàng"
+            ? driverStateLabel(selectedDriver)
             : vehicleId && drivers.length > 0
               ? `${readyDriverCount} sẵn sàng`
               : vehicleId
@@ -156,7 +166,7 @@ export function CarrierAssignmentSection({
                 renderItem={({ item }) => {
                   const available = item.availableForAssignment;
                   const selected = vehicleId === item.id;
-                  const subtitle = [item.temperatureLabel, available ? "Rảnh" : "Đang bận"].filter(Boolean).join(" · ");
+                  const subtitle = [item.temperatureLabel, vehicleStateLabel(item)].filter(Boolean).join(" · ");
                   return (
                     <Pressable
                       accessibilityRole="button"
@@ -216,7 +226,7 @@ export function CarrierAssignmentSection({
                     >
                       <View style={styles.sheetRowText}>
                         <Text numberOfLines={1} style={[styles.rowLabel, { color: colors.ink }]}>{item.name}</Text>
-                        <Text style={[styles.rowMeta, { color: colors.muted }]}>{ready ? "Sẵn sàng" : "Chưa phân công được"}</Text>
+                        <Text style={[styles.rowMeta, { color: colors.muted }]}>{driverStateLabel(item)}</Text>
                       </View>
                       {selected ? <MaterialCommunityIcons name="check" size={22} color={colors.primary} /> : null}
                     </Pressable>

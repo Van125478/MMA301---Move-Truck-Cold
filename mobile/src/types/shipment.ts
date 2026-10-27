@@ -76,15 +76,20 @@ export type FleetVehicle = {
   id: string;
   label: string;
   plate: string | null;
+  vehicleKindLabel: string | null;
   temperatureLabel: string | null;
+  capacityTon: number | null;
   status: "ACTIVE" | "ARCHIVED";
   statusLabel: string;
+  canPause: boolean;
+  pauseBlockReason: string | null;
   availableForAssignment: boolean;
 };
 
 export type FleetDriver = {
   id: string;
   name: string;
+  username: string | null;
   accountStatus: "ACTIVE" | "LOCKED";
   mustChangePassword: boolean;
 };
@@ -265,9 +270,13 @@ function parseVehicle(value: unknown): FleetVehicle[] {
       id,
       label,
       plate: text(row.plate),
+      vehicleKindLabel: text(row.vehicleKindLabel),
       temperatureLabel: text(row.temperatureLabel),
+      capacityTon: typeof row.capacityTon === "number" ? row.capacityTon : null,
       status: row.status === "ARCHIVED" ? "ARCHIVED" : "ACTIVE",
-      statusLabel: text(row.statusLabel) ?? (row.status === "ARCHIVED" ? "Đã lưu trữ" : "Đang hoạt động"),
+      statusLabel: text(row.statusLabel) ?? (row.status === "ARCHIVED" ? "Tạm dừng" : "Đang hoạt động"),
+      canPause: row.canArchive === true,
+      pauseBlockReason: text(row.archiveBlockReason),
       availableForAssignment: row.availableForAssignment === true,
     },
   ];
@@ -283,6 +292,7 @@ function parseDriver(value: unknown): FleetDriver[] {
     {
       id,
       name,
+      username: text(row.username),
       accountStatus: row.accountStatus === "LOCKED" ? "LOCKED" : "ACTIVE",
       mustChangePassword: row.mustChangePassword === true,
     },
