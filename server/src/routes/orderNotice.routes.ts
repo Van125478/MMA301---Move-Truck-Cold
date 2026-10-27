@@ -4,7 +4,7 @@ import { requireAuth } from "../middlewares/requireAuth.js";
 import { requireOperationalSession } from "../middlewares/requireOperational.js";
 import { requireTrustedOrigin } from "../middlewares/requireOrigin.js";
 import type { Actor } from "../incidents/access.js";
-import { listOrderNotices, markOrderNoticeRead, unreadOrderNoticeCount } from "../orders/notices.js";
+import { deleteOrderNotices, listOrderNotices, markOrderNoticeRead, unreadOrderNoticeCount } from "../orders/notices.js";
 
 export const orderNoticeRouter = Router();
 
@@ -40,6 +40,24 @@ orderNoticeRouter.post("/:id/read", requireTrustedOrigin, async (request, respon
     const actor = actorOf(request);
     const notification = await markOrderNoticeRead(actor.id, id, actor);
     response.status(200).json({ notification });
+  } catch (error) {
+    next(error);
+  }
+});
+
+orderNoticeRouter.post("/bulk-delete", requireTrustedOrigin, async (request, response, next) => {
+  try {
+    const body: unknown = request.body;
+    if (typeof body !== "object" || body === null || Array.isArray(body)) {
+      throw new HttpError(400, "invalid_request", "Danh sách thông báo không hợp lệ.");
+    }
+    const idsRaw = (body as { ids?: unknown }).ids;
+    if (!Array.isArray(idsRaw)) throw new HttpError(400, "invalid_request", "Danh sách thông báo không hợp lệ.");
+    const ids = idsRaw.filter((value): value is string => typeof value === "string" && value.length > 0);
+    if (ids.length === 0) throw new HttpError(400, "invalid_request", "Chọn ít nhất một thông báo.");
+    const actor = actorOf(request);
+    await deleteOrderNotices(actor.id, ids, actor);
+    response.status(200).json({ ok: true, deleted: ids.length });
   } catch (error) {
     next(error);
   }
