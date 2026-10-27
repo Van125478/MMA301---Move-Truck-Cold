@@ -2,6 +2,7 @@ import { useCallback, useState } from "react";
 import { Pressable, StyleSheet, Text, TextInput, View } from "react-native";
 import { useFocusEffect } from "@react-navigation/native";
 import { ChoiceChip } from "../common/Feedback";
+import { DetailSectionShell } from "./DetailSectionShell";
 import { pointer } from "../../constants/hit";
 import { radius, space, useTheme } from "../../constants/theme";
 import { ApiError } from "../../services/api/client";
@@ -70,9 +71,7 @@ export function ShipmentIncidents({ shipmentId, role }: { shipmentId: string; ro
   }
 
   return (
-    <View style={styles.block}>
-      <Text accessibilityRole="header" style={[styles.heading, { color: colors.ink }]}>Sự cố</Text>
-      <Text style={[styles.meta, { color: colors.muted }]}>Báo sự cố không đổi trạng thái chuyến và không dừng GPS.</Text>
+    <DetailSectionShell title="Sự cố" subtitle="Báo sự cố không dừng GPS và không đổi trạng thái chuyến" icon="alert-circle-outline" accent={colors.warning}>
       {error ? <Text style={[styles.meta, { color: colors.danger }]}>{error}</Text> : null}
       {rows.length === 0 ? <Text style={[styles.meta, { color: colors.muted }]}>Chưa có hồ sơ sự cố.</Text> : null}
       {rows.map((row) => (
@@ -103,7 +102,7 @@ export function ShipmentIncidents({ shipmentId, role }: { shipmentId: string; ro
       ) : (
         <Action label="Báo sự cố" onPress={() => setOpen(true)} />
       )}
-    </View>
+    </DetailSectionShell>
   );
 }
 
@@ -117,8 +116,6 @@ function Action({ label, onPress }: { label: string; onPress: () => void }) {
 }
 
 const styles = StyleSheet.create({
-  block: { gap: space.sm },
-  heading: { fontFamily: "Inter_700Bold", fontSize: 18, lineHeight: 26 },
   meta: { fontFamily: "Inter_400Regular", fontSize: 14, lineHeight: 20 },
   body: { fontFamily: "Inter_600SemiBold", fontSize: 15, lineHeight: 22 },
   card: { borderWidth: 1, borderRadius: radius.card, padding: space.md, gap: space.xs },

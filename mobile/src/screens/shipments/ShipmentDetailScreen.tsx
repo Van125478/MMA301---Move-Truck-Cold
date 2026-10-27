@@ -27,12 +27,16 @@ import {
 } from "../../services/api/shipments";
 import { startLiveShare, stopLiveShare } from "../../services/location/liveShare";
 import type { FleetDriver, FleetVehicle, Shipment, TrackingView } from "../../types/shipment";
-import { LocationMap } from "../../components/shipment/LocationMap";
+import { CargoVehicleSection } from "../../components/shipment/CargoVehicleSection";
+import { DetailSectionShell } from "../../components/shipment/DetailSectionShell";
+import { DangerLink, ShipmentDetailActions } from "../../components/shipment/ShipmentDetailActions";
+import { ShipmentLocationSection } from "../../components/shipment/ShipmentLocationSection";
+import { ShipmentTimelineSection } from "../../components/shipment/ShipmentTimelineSection";
+import { cargoHeroImage } from "../../utils/cargoHeroImage";
+import { formatVnd, formatWindow } from "../../utils/format";
 import { ReviewSection } from "../../components/shipment/ReviewSection";
 import { ShipmentChat } from "../../components/shipment/ShipmentChat";
 import { ShipmentIncidents } from "../../components/shipment/ShipmentIncidents";
-import { cargoHeroImage } from "../../utils/cargoHeroImage";
-import { formatVnd, formatWhen, formatWindow } from "../../utils/format";
 
 type Action = "cancel" | "claim" | "assign" | "pickup" | "delivery";
 
@@ -213,13 +217,11 @@ function ShipmentDetailBody({
               {shipment.deliveryLocation}
             </Text>
             <View style={[styles.priceRow, { borderTopColor: colors.line }]}>
-              <View>
-                <Text maxFontSizeMultiplier={1.4} style={[styles.priceLabel, { color: colors.muted }]}>
-                  Cước niêm yết
-                </Text>
-                <Text style={[styles.caption, { color: colors.muted }]}>Chưa phải thanh toán trên app.</Text>
-              </View>
-              <Text maxFontSizeMultiplier={1.3} numberOfLines={1} style={[styles.price, { color: colors.primary }]}>
+              <Text maxFontSizeMultiplier={1.4} style={[styles.priceLabel, { color: colors.muted }]}>
+                Cước niêm yết
+              </Text>
+              <Text style={[styles.caption, { color: colors.muted }]}>Chưa phải thanh toán trên app.</Text>
+              <Text maxFontSizeMultiplier={1.3} style={[styles.price, { color: colors.primary }]}>
                 {formatVnd(shipment.listedPriceVnd)}
               </Text>
             </View>
@@ -227,66 +229,8 @@ function ShipmentDetailBody({
         </View>
         {actionError ? <FieldError message={actionError} /> : null}
 
-        <Section title="Lộ trình">
-          <Stop label="Lấy hàng" place={shipment.pickupLocation} company={shipment.pickupCompany} contact={shipment.pickupContactName} phone={shipment.pickupPhone} when={formatWindow(shipment.pickupDate, shipment.pickupTimeFrom, shipment.pickupTimeTo)} />
-          <Stop label="Giao hàng" place={shipment.deliveryLocation} company={shipment.deliveryCompany} contact={shipment.deliveryContactName} phone={shipment.deliveryPhone} when={formatWindow(shipment.deliveryDate, shipment.deliveryTimeFrom, shipment.deliveryTimeTo)} />
-        </Section>
-
-        <Section title="Hàng và xe">
-          <Fact label="Nhóm nhiệt" value={shipment.temperatureLabel} />
-          <Fact label="Yêu cầu xe" value={shipment.vehicleRequirement || "Chưa ghi"} />
-          <Fact label="Khối lượng" value={shipment.cargoWeightTon == null ? "Chưa ghi" : `${shipment.cargoWeightTon} tấn`} />
-          <Fact label="Thể tích" value={shipment.cargoVolumeM3 == null ? "Chưa ghi" : `${shipment.cargoVolumeM3} m³`} />
-          <Fact label="Số thùng" value={shipment.packageCount == null ? "Chưa ghi" : String(shipment.packageCount)} />
-          {shipment.vehicleLabel ? <Fact label="Xe" value={shipment.vehicleLabel} /> : null}
-          {shipment.driverName ? <Fact label="Tài xế" value={shipment.driverName} /> : null}
-        </Section>
-
-        {role === "SHIPPER" || role === "CARRIER" ? (
-          shipment.status !== "PUBLISHED" && shipment.status !== "CANCELLED" ? (
-            <ShipmentChat shipmentId={shipment.id} role={role} />
-          ) : null
-        ) : null}
-        {role && role !== "ADMIN" ? <ShipmentIncidents shipmentId={shipment.id} role={role} /> : null}
-        <ReviewSection
-          shipmentId={shipment.id}
-          canWrite={role === "SHIPPER" && (shipment.status === "DELIVERY_CONFIRMED" || shipment.status === "COMPLETED") && shipment.carrierId != null}
-        />
-
-        {shipment.timeline.length > 0 ? (
-          <Section title="Mốc đã ghi">
-            {shipment.timeline.map((event) => (
-              <View key={event.id} style={styles.event}>
-                <Text style={[styles.eventTitle, { color: colors.ink }]}>{event.label}</Text>
-                <Text style={[styles.eventMeta, { color: colors.muted }]}>
-                  {formatWhen(event.occurredAt)}
-                  {event.statusAfterLabel ? ` · ${event.statusAfterLabel}` : ""}
-                </Text>
-                {event.detail ? <Text style={[styles.eventMeta, { color: colors.muted }]}>{event.detail}</Text> : null}
-              </View>
-            ))}
-          </Section>
-        ) : null}
-
-        {shipment.status === "IN_TRANSIT" ? (
-          <Section title="Vị trí xe">
-            <Text style={[styles.eventMeta, { color: colors.ink }]}>{tracking?.phaseLabel ?? "Chưa xem được vị trí xe."}</Text>
-            {tracking?.latitude != null && tracking.longitude != null ? (
-              <LocationMap latitude={tracking.latitude} longitude={tracking.longitude} />
-            ) : (
-              <Text style={[styles.eventMeta, { color: colors.muted }]}>Đang chờ tọa độ đầu tiên sau khi lấy hàng.</Text>
-            )}
-            {role === "DRIVER" ? (
-              <Text style={[styles.eventMeta, { color: colors.ink }]}>
-                Định vị đang được chia sẻ. Tài xế không tắt được. Chỉ dừng khi hàng đã giao.
-              </Text>
-            ) : null}
-          </Section>
-        ) : null}
-
         {canAssign ? (
-          <Section title="Phân công xe và tài xế">
-            <Text style={[styles.eventMeta, { color: colors.muted }]}>Nhận chuyến chưa gán xe. Chọn một xe đang rảnh và một tài xế của nhà xe.</Text>
+          <DetailSectionShell title="Phân công chuyến" subtitle="Chọn xe rảnh và tài xế sẵn sàng" icon="account-hard-hat">
             {fleetNote ? <FieldError message={fleetNote} /> : null}
             <Text style={[styles.pickLabel, { color: colors.ink }]}>Xe</Text>
             <View style={styles.chips}>
@@ -301,7 +245,7 @@ function ShipmentDetailBody({
                 />
               ))}
             </View>
-            {vehicles.length === 0 ? <Text style={[styles.eventMeta, { color: colors.muted }]}>Nhà xe chưa có xe.</Text> : null}
+            {vehicles.length === 0 ? <Text style={[styles.hint, { color: colors.muted }]}>Nhà xe chưa có xe.</Text> : null}
             <Text style={[styles.pickLabel, { color: colors.ink }]}>Tài xế</Text>
             <View style={styles.chips}>
               {drivers.map((driver) => {
@@ -318,21 +262,42 @@ function ShipmentDetailBody({
                 );
               })}
             </View>
-            {drivers.length === 0 ? <Text style={[styles.eventMeta, { color: colors.muted }]}>Nhà xe chưa có tài xế.</Text> : null}
+            {drivers.length === 0 ? <Text style={[styles.hint, { color: colors.muted }]}>Nhà xe chưa có tài xế.</Text> : null}
             <PrimaryButton spaced={false} label="Phân công" disabled={!vehicleId || !driverId} onPress={() => setConfirm("assign")} />
-          </Section>
+          </DetailSectionShell>
         ) : null}
 
-        {actionError ? <FieldError message={actionError} /> : null}
-        {canClaim ? <PrimaryButton label="Nhận chuyến" onPress={() => setConfirm("claim")} /> : null}
-        {canPickup ? <PrimaryButton label="Xác nhận đã lấy hàng" onPress={() => setConfirm("pickup")} /> : null}
-        {canDeliver ? <PrimaryButton label="Xác nhận đã giao hàng" onPress={() => setConfirm("delivery")} /> : null}
-        {canCancel ? (
-          <Pressable accessibilityRole="button" accessibilityLabel="Hủy đơn" onPress={() => setConfirm("cancel")} style={[styles.cancel, pointer, { borderColor: colors.danger }]}>
-            <Text style={[styles.cancelText, { color: colors.danger }]}>Hủy đơn đang tìm xe</Text>
-          </Pressable>
+        <Section title="Lộ trình">
+          <Stop label="Lấy hàng" place={shipment.pickupLocation} company={shipment.pickupCompany} contact={shipment.pickupContactName} phone={shipment.pickupPhone} when={formatWindow(shipment.pickupDate, shipment.pickupTimeFrom, shipment.pickupTimeTo)} />
+          <Stop label="Giao hàng" place={shipment.deliveryLocation} company={shipment.deliveryCompany} contact={shipment.deliveryContactName} phone={shipment.deliveryPhone} when={formatWindow(shipment.deliveryDate, shipment.deliveryTimeFrom, shipment.deliveryTimeTo)} />
+        </Section>
+        <CargoVehicleSection shipment={shipment} />
+
+        {role === "SHIPPER" || role === "CARRIER" ? (
+          shipment.status !== "PUBLISHED" && shipment.status !== "CANCELLED" ? (
+            <ShipmentChat shipmentId={shipment.id} role={role} />
+          ) : null
         ) : null}
-        {role === "SHIPPER" && !canCancel ? <Text style={[styles.eventMeta, { color: colors.muted }]}>Chỉ hủy được đơn đang tìm xe. Đơn đã có nhà xe nhận thì chưa mở hủy.</Text> : null}
+        {role && role !== "ADMIN" ? <ShipmentIncidents shipmentId={shipment.id} role={role} /> : null}
+        <ReviewSection
+          shipmentId={shipment.id}
+          canWrite={role === "SHIPPER" && (shipment.status === "DELIVERY_CONFIRMED" || shipment.status === "COMPLETED") && shipment.carrierId != null}
+        />
+
+        {shipment.status === "IN_TRANSIT" ? (
+          <ShipmentLocationSection tracking={tracking} driverNote={role === "DRIVER"} />
+        ) : null}
+
+        <ShipmentTimelineSection events={shipment.timeline} />
+
+        <ShipmentDetailActions
+          footnote={role === "SHIPPER" && !canCancel ? "Chỉ hủy được đơn đang tìm xe. Đơn đã có nhà xe nhận thì chưa mở hủy." : undefined}
+        >
+          {canClaim ? <PrimaryButton spaced={false} label="Nhận chuyến" onPress={() => setConfirm("claim")} /> : null}
+          {canPickup ? <PrimaryButton spaced={false} label="Xác nhận đã lấy hàng" onPress={() => setConfirm("pickup")} /> : null}
+          {canDeliver ? <PrimaryButton spaced={false} label="Xác nhận đã giao hàng" onPress={() => setConfirm("delivery")} /> : null}
+          {canCancel ? <DangerLink label="Hủy đơn đang tìm xe" onPress={() => setConfirm("cancel")} /> : null}
+        </ShipmentDetailActions>
       </ScrollView>
       <ConfirmDialog
         visible={confirm !== null}
@@ -437,16 +402,6 @@ function Stop({ label, place, company, contact, phone, when }: { label: string; 
   );
 }
 
-function Fact({ label, value }: { label: string; value: string }) {
-  const { colors } = useTheme();
-  return (
-    <View style={styles.fact}>
-      <Text style={[styles.factLabel, { color: colors.muted }]}>{label}</Text>
-      <Text style={[styles.factValue, { color: colors.ink }]}>{value}</Text>
-    </View>
-  );
-}
-
 const styles = StyleSheet.create({
   screen: { flex: 1 },
   embedded: { minHeight: 0 },
@@ -455,39 +410,25 @@ const styles = StyleSheet.create({
   back: { width: 48, height: 48, alignItems: "center", justifyContent: "center" },
   topTitle: { flex: 1, fontFamily: "Inter_600SemiBold", fontSize: 16, lineHeight: 22 },
   heart: { width: 48, height: 48, alignItems: "center", justifyContent: "center" },
-  page: { padding: space.lg, gap: space.md },
+  page: { padding: space.lg, gap: space.lg },
   hero: { borderWidth: 1, borderRadius: radius.card, overflow: "hidden" },
   heroPhoto: { width: "100%", height: 200 },
   heroBody: { padding: space.lg, gap: space.sm },
   title: { fontFamily: "Inter_700Bold", fontSize: 22, lineHeight: 30 },
   route: { fontFamily: "Inter_500Medium", fontSize: 16, lineHeight: 24 },
-  priceRow: {
-    marginTop: space.sm,
-    paddingTop: space.md,
-    borderTopWidth: 1,
-    flexDirection: "row",
-    alignItems: "flex-end",
-    justifyContent: "space-between",
-    gap: space.md,
-  },
+  priceRow: { marginTop: space.sm, paddingTop: space.md, borderTopWidth: 1, gap: space.xs },
   priceLabel: { fontFamily: "Inter_600SemiBold", fontSize: 14, lineHeight: 20 },
-  price: { flexShrink: 1, fontFamily: "Inter_700Bold", fontSize: 22, lineHeight: 28, textAlign: "right" },
-  caption: { marginTop: 2, fontFamily: "Inter_400Regular", fontSize: 13, lineHeight: 18 },
+  price: { marginTop: space.xs, fontFamily: "Inter_700Bold", fontSize: 24, lineHeight: 32 },
+  caption: { fontFamily: "Inter_400Regular", fontSize: 13, lineHeight: 18 },
   section: { borderWidth: 1, borderRadius: radius.card, padding: space.lg, gap: space.md },
   sectionTitle: { fontFamily: "Inter_700Bold", fontSize: 18, lineHeight: 26 },
   stop: { gap: 2 },
   stopLabel: { fontFamily: "Inter_600SemiBold", fontSize: 13, lineHeight: 18, letterSpacing: 0.4 },
   stopPlace: { fontFamily: "Inter_600SemiBold", fontSize: 16, lineHeight: 24 },
-  event: { gap: 2 },
-  eventTitle: { fontFamily: "Inter_600SemiBold", fontSize: 16, lineHeight: 22 },
   eventMeta: { fontFamily: "Inter_400Regular", fontSize: 14, lineHeight: 20 },
-  fact: { flexDirection: "row", justifyContent: "space-between", gap: space.md },
-  factLabel: { fontFamily: "Inter_500Medium", fontSize: 14, lineHeight: 20 },
-  factValue: { flex: 1, textAlign: "right", fontFamily: "Inter_600SemiBold", fontSize: 15, lineHeight: 22 },
   pickLabel: { fontFamily: "Inter_600SemiBold", fontSize: 14, lineHeight: 20 },
+  hint: { fontFamily: "Inter_400Regular", fontSize: 14, lineHeight: 20 },
   chips: { flexDirection: "row", flexWrap: "wrap", gap: space.sm },
-  cancel: { minHeight: 52, borderWidth: 1, borderRadius: radius.control, alignItems: "center", justifyContent: "center" },
-  cancelText: { fontFamily: "Inter_600SemiBold", fontSize: 16, lineHeight: 24 },
   removeMissing: { minHeight: 48, alignItems: "center", justifyContent: "center", marginBottom: space.xl },
   removeMissingText: { fontFamily: "Inter_600SemiBold", fontSize: 15, lineHeight: 22, textAlign: "center", paddingHorizontal: space.lg },
 });

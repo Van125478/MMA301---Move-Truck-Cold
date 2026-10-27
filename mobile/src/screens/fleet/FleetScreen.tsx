@@ -29,6 +29,15 @@ export function FleetScreen() {
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
   const [pending, setPending] = useState(false);
+  const [vehiclesExpanded, setVehiclesExpanded] = useState(false);
+  const [driversExpanded, setDriversExpanded] = useState(false);
+
+  const activeVehicles = vehicles.filter((item) => item.status === "ACTIVE");
+  const previewCount = 3;
+  const showVehiclePreview = vehicles.length > previewCount && !vehiclesExpanded;
+  const showDriverPreview = drivers.length > previewCount && !driversExpanded;
+  const visibleVehicles = showVehiclePreview ? vehicles.slice(0, previewCount) : vehicles;
+  const visibleDrivers = showDriverPreview ? drivers.slice(0, previewCount) : drivers;
 
   const load = useCallback(async () => {
     try {
@@ -100,16 +109,26 @@ export function FleetScreen() {
     <View style={styles.block}>
       <View style={styles.head}>
         <Text style={[styles.heading, { color: colors.ink }]}>Đội xe</Text>
-        <Text style={[styles.count, { color: colors.muted }]}>{vehicles.filter((item) => item.status === "ACTIVE").length} xe đang dùng</Text>
+        <Text style={[styles.count, { color: colors.muted }]}>{activeVehicles.length} xe · {drivers.length} tài xế</Text>
       </View>
       {error ? <FieldError message={error} /> : null}
       <View style={styles.actions}>
-        <Pressable accessibilityRole="button" accessibilityLabel="Thêm xe" onPress={() => setMode(mode === "vehicle" ? "list" : "vehicle")} style={[styles.action, pointer, elevatedCard(colors)]}>
-          <MaterialCommunityIcons name="truck-plus-outline" size={22} color={colors.primary} />
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Thêm xe"
+          onPress={() => setMode(mode === "vehicle" ? "list" : "vehicle")}
+          style={[styles.action, pointer, elevatedCard(colors), mode === "vehicle" ? { borderColor: colors.primary, borderWidth: 1 } : null]}
+        >
+          <MaterialCommunityIcons name="truck-plus-outline" size={18} color={colors.primary} />
           <Text style={[styles.actionText, { color: colors.ink }]}>Thêm xe</Text>
         </Pressable>
-        <Pressable accessibilityRole="button" accessibilityLabel="Tạo tài xế" onPress={() => setMode(mode === "driver" ? "list" : "driver")} style={[styles.action, pointer, elevatedCard(colors)]}>
-          <MaterialCommunityIcons name="account-plus-outline" size={22} color={colors.primary} />
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Tạo tài xế"
+          onPress={() => setMode(mode === "driver" ? "list" : "driver")}
+          style={[styles.action, pointer, elevatedCard(colors), mode === "driver" ? { borderColor: colors.primary, borderWidth: 1 } : null]}
+        >
+          <MaterialCommunityIcons name="account-plus-outline" size={18} color={colors.primary} />
           <Text style={[styles.actionText, { color: colors.ink }]}>Tạo tài xế</Text>
         </Pressable>
       </View>
@@ -140,54 +159,123 @@ export function FleetScreen() {
           <PrimaryButton spaced={false} label="Tạo tài xế" pending={pending} onPress={() => void saveDriver()} />
         </View>
       ) : null}
-      {vehicles.map((vehicle) => (
-        <View key={vehicle.id} style={[styles.card, elevatedCard(colors)]}>
-          <View style={[styles.mark, { backgroundColor: colors.badge }]}>
-            <MaterialCommunityIcons name="truck-outline" size={22} color={colors.badgeInk} />
-          </View>
-          <View style={styles.cardBody}>
-            <Text numberOfLines={1} style={[styles.cardTitle, { color: colors.ink }]}>{vehicle.label}</Text>
-            <Text numberOfLines={1} style={[styles.cardMeta, { color: colors.muted }]}>
-              {vehicle.plate ?? "Chưa có biển số"} · {vehicle.statusLabel}
-            </Text>
-          </View>
-          {vehicle.status === "ACTIVE" ? (
-            <Pressable accessibilityRole="button" accessibilityLabel={`Lưu trữ ${vehicle.label}`} onPress={() => void archive(vehicle.id)} style={[styles.archive, pointer]}>
-              <Text style={[styles.archiveText, { color: colors.primary }]}>Lưu trữ</Text>
-            </Pressable>
-          ) : null}
+      <View style={styles.section}>
+        <Text style={[styles.sectionLabel, { color: colors.muted }]}>Xe ({vehicles.length})</Text>
+        <View style={styles.list}>
+          {visibleVehicles.length === 0 ? (
+            <Text style={[styles.empty, { color: colors.muted }]}>Chưa có xe trong đội.</Text>
+          ) : (
+            visibleVehicles.map((vehicle) => (
+              <View key={vehicle.id} style={[styles.card, elevatedCard(colors)]}>
+                <View style={[styles.mark, { backgroundColor: colors.badge }]}>
+                  <MaterialCommunityIcons name="truck-outline" size={18} color={colors.badgeInk} />
+                </View>
+                <View style={styles.cardBody}>
+                  <Text numberOfLines={2} style={[styles.cardTitle, { color: colors.ink }]}>{vehicle.label}</Text>
+                  <Text numberOfLines={1} style={[styles.cardMeta, { color: colors.muted }]}>
+                    {vehicle.plate ?? "Chưa có biển số"} · {vehicle.statusLabel}
+                  </Text>
+                </View>
+                {vehicle.status === "ACTIVE" ? (
+                  <Pressable
+                    accessibilityRole="button"
+                    accessibilityLabel={`Lưu trữ ${vehicle.label}`}
+                    onPress={() => void archive(vehicle.id)}
+                    style={[styles.archive, pointer]}
+                  >
+                    <Text style={[styles.archiveText, { color: colors.primary }]}>Lưu trữ</Text>
+                  </Pressable>
+                ) : null}
+              </View>
+            ))
+          )}
         </View>
-      ))}
-      {drivers.map((driver) => (
-        <View key={driver.id} style={[styles.card, elevatedCard(colors)]}>
-          <View style={[styles.mark, { backgroundColor: colors.field }]}>
-            <MaterialCommunityIcons name="account-outline" size={22} color={colors.ink} />
-          </View>
-          <View style={styles.cardBody}>
-            <Text numberOfLines={1} style={[styles.cardTitle, { color: colors.ink }]}>{driver.name}</Text>
-            <Text style={[styles.cardMeta, { color: colors.muted }]}>Tài xế</Text>
-          </View>
+        {vehicles.length > previewCount ? (
+          <ExpandToggle
+            expanded={vehiclesExpanded}
+            hidden={vehicles.length - previewCount}
+            onPress={() => setVehiclesExpanded((value) => !value)}
+          />
+        ) : null}
+      </View>
+
+      <View style={styles.section}>
+        <Text style={[styles.sectionLabel, { color: colors.muted }]}>Tài xế ({drivers.length})</Text>
+        <View style={styles.list}>
+          {visibleDrivers.length === 0 ? (
+            <Text style={[styles.empty, { color: colors.muted }]}>Chưa có tài xế.</Text>
+          ) : (
+            visibleDrivers.map((driver) => (
+              <View key={driver.id} style={[styles.card, elevatedCard(colors)]}>
+                <View style={[styles.mark, { backgroundColor: colors.field }]}>
+                  <MaterialCommunityIcons name="account-outline" size={18} color={colors.ink} />
+                </View>
+                <View style={styles.cardBody}>
+                  <Text numberOfLines={2} style={[styles.cardTitle, { color: colors.ink }]}>{driver.name}</Text>
+                  <Text numberOfLines={1} style={[styles.cardMeta, { color: colors.muted }]}>Tài xế đội</Text>
+                </View>
+              </View>
+            ))
+          )}
         </View>
-      ))}
+        {drivers.length > previewCount ? (
+          <ExpandToggle
+            expanded={driversExpanded}
+            hidden={drivers.length - previewCount}
+            onPress={() => setDriversExpanded((value) => !value)}
+          />
+        ) : null}
+      </View>
     </View>
   );
 }
 
+function ExpandToggle({ expanded, hidden, onPress }: { expanded: boolean; hidden: number; onPress: () => void }) {
+  const { colors } = useTheme();
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={expanded ? "Thu gọn" : `Xem thêm ${hidden}`}
+      onPress={onPress}
+      style={[styles.more, pointer]}
+    >
+      <Text style={[styles.moreText, { color: colors.primary }]}>
+        {expanded ? "Thu gọn" : `Xem thêm (${hidden})`}
+      </Text>
+      <MaterialCommunityIcons name={expanded ? "chevron-up" : "chevron-down"} size={20} color={colors.primary} />
+    </Pressable>
+  );
+}
+
 const styles = StyleSheet.create({
-  block: { gap: space.md },
-  head: { flexDirection: "row", alignItems: "baseline", justifyContent: "space-between" },
-  heading: { fontFamily: "Inter_700Bold", fontSize: 20, lineHeight: 28 },
-  count: { fontFamily: "Inter_500Medium", fontSize: 13, lineHeight: 18 },
-  actions: { flexDirection: "row", gap: space.sm },
-  action: { flex: 1, minHeight: 72, alignItems: "center", justifyContent: "center", gap: 6, padding: space.md },
-  actionText: { fontFamily: "Inter_600SemiBold", fontSize: 14, lineHeight: 20 },
-  form: { padding: space.lg, gap: space.sm },
+  block: { gap: space.sm },
+  head: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: space.sm },
+  heading: { fontFamily: "Inter_700Bold", fontSize: 18, lineHeight: 24 },
+  count: { flexShrink: 1, fontFamily: "Inter_500Medium", fontSize: 12, lineHeight: 16, textAlign: "right" },
+  actions: { gap: space.xs },
+  action: {
+    flexDirection: "row",
+    minHeight: 44,
+    alignItems: "center",
+    justifyContent: "center",
+    gap: space.xs,
+    paddingHorizontal: space.md,
+    paddingVertical: space.sm,
+  },
+  section: { gap: space.xs },
+  sectionLabel: { fontFamily: "Inter_600SemiBold", fontSize: 12, lineHeight: 16, letterSpacing: 0.3, textTransform: "uppercase" },
+  empty: { fontFamily: "Inter_400Regular", fontSize: 13, lineHeight: 18, paddingVertical: space.sm, paddingHorizontal: space.xs },
+  actionText: { fontFamily: "Inter_600SemiBold", fontSize: 13, lineHeight: 18 },
+  form: { padding: space.md, gap: space.sm },
   chips: { flexDirection: "row", flexWrap: "wrap", gap: space.sm },
-  card: { flexDirection: "row", alignItems: "center", gap: space.md, padding: space.md },
-  mark: { width: 44, height: 44, borderRadius: radius.control, alignItems: "center", justifyContent: "center" },
+  list: { gap: space.xs },
+  card: { flexDirection: "row", alignItems: "center", gap: space.sm, paddingVertical: space.sm, paddingHorizontal: space.md },
+  mark: { width: 34, height: 34, borderRadius: radius.control, alignItems: "center", justifyContent: "center" },
   cardBody: { flex: 1, minWidth: 0 },
-  cardTitle: { fontFamily: "Inter_600SemiBold", fontSize: 16, lineHeight: 22 },
-  cardMeta: { fontFamily: "Inter_400Regular", fontSize: 13, lineHeight: 18 },
-  archive: { minHeight: 36, justifyContent: "center", paddingHorizontal: space.sm },
-  archiveText: { fontFamily: "Inter_600SemiBold", fontSize: 13, lineHeight: 18 },
+  cardTitle: { fontFamily: "Inter_600SemiBold", fontSize: 14, lineHeight: 20 },
+  cardMeta: { fontFamily: "Inter_400Regular", fontSize: 12, lineHeight: 16 },
+  archive: { minHeight: 32, justifyContent: "center", paddingHorizontal: space.xs },
+  archiveText: { fontFamily: "Inter_600SemiBold", fontSize: 12, lineHeight: 16 },
+  more: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 2, minHeight: 36 },
+  moreText: { fontFamily: "Inter_600SemiBold", fontSize: 13, lineHeight: 18 },
 });

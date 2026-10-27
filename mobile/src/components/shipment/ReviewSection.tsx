@@ -5,6 +5,7 @@ import { useFocusEffect } from "@react-navigation/native";
 import { Field } from "../common/Field";
 import { FieldError } from "../common/FieldError";
 import { PrimaryButton } from "../common/PrimaryButton";
+import { DetailSectionShell } from "./DetailSectionShell";
 import { pointer } from "../../constants/hit";
 import { radius, space, useTheme } from "../../constants/theme";
 import { ApiError } from "../../services/api/client";
@@ -70,10 +71,7 @@ export function ReviewSection({ shipmentId, canWrite }: { shipmentId: string; ca
   const showForm = canWrite && total === 0 && !error;
 
   return (
-    <View style={styles.block}>
-      <Text accessibilityRole="header" style={[styles.heading, { color: colors.ink }]}>
-        Đánh giá
-      </Text>
+    <DetailSectionShell title="Đánh giá" subtitle="Chủ hàng chấm nhà xe sau khi giao" icon="star-circle-outline" accent="#B45309">
       {error ? <FieldError message={error} /> : null}
       <Text style={[styles.meta, { color: colors.muted }]}>{total === 0 ? "Chưa có đánh giá." : `${total} đánh giá`}</Text>
       {bundle && bundle.groups.length > 0 ? (
@@ -107,13 +105,11 @@ export function ReviewSection({ shipmentId, canWrite }: { shipmentId: string; ca
           <PrimaryButton spaced={false} label="Gửi đánh giá" pending={pending} pendingLabel="Đang gửi…" onPress={() => void send()} />
         </View>
       ) : null}
-    </View>
+    </DetailSectionShell>
   );
 }
 
 const styles = StyleSheet.create({
-  block: { gap: space.sm },
-  heading: { fontFamily: "Inter_700Bold", fontSize: 18, lineHeight: 26 },
   meta: { fontFamily: "Inter_400Regular", fontSize: 14, lineHeight: 20 },
   groups: { flexDirection: "row", flexWrap: "wrap", gap: space.sm },
   group: { flexDirection: "row", alignItems: "center", gap: 6, borderRadius: radius.pill, paddingHorizontal: 10, paddingVertical: 6 },

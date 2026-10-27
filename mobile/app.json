@@ -43,7 +43,8 @@
         {
           "locationWhenInUsePermission": "Coldi dùng vị trí để tài xế gửi GPS của chuyến đang chạy."
         }
-      ]
+      ],
+      "@react-native-community/datetimepicker"
     ]
   }
 }

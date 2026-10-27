@@ -1,8 +1,9 @@
 import { useEffect, useState } from "react";
 import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
+import { DetailSectionShell } from "./DetailSectionShell";
 import { pointer } from "../../constants/hit";
-import { space, useTheme } from "../../constants/theme";
+import { radius, space, useTheme } from "../../constants/theme";
 import { ApiError } from "../../services/api/client";
 import { loadChat, openChat, sendChat, type ChatMessage } from "../../services/api/operations";
 import { formatWhen } from "../../utils/format";
@@ -49,10 +50,7 @@ export function ShipmentChat({ shipmentId, role }: { shipmentId: string; role: "
   }
 
   return (
-    <View style={styles.block}>
-      <Text accessibilityRole="header" style={[styles.heading, { color: colors.ink }]}>
-        {other}
-      </Text>
+    <DetailSectionShell title={`Chat · ${other}`} subtitle="Trao đổi nhanh trên chuyến" icon="message-text-outline">
       <View style={[styles.frame, { backgroundColor: colors.field, borderColor: colors.line }]}>
         <ScrollView style={styles.thread} contentContainerStyle={styles.threadContent} keyboardShouldPersistTaps="handled">
           {messages.length === 0 ? <Text style={[styles.empty, { color: colors.muted }]}>Nhắn để bắt đầu.</Text> : null}
@@ -98,14 +96,12 @@ export function ShipmentChat({ shipmentId, role }: { shipmentId: string; role: "
           </Pressable>
         </View>
       </View>
-    </View>
+    </DetailSectionShell>
   );
 }
 
 const styles = StyleSheet.create({
-  block: { gap: space.sm },
-  heading: { fontFamily: "Inter_700Bold", fontSize: 18, lineHeight: 26 },
-  frame: { height: 320, borderWidth: 1, borderRadius: 20, overflow: "hidden" },
+  frame: { height: 320, borderWidth: 1, borderRadius: radius.card, overflow: "hidden" },
   thread: { flex: 1 },
   threadContent: { padding: space.md, gap: space.sm, flexGrow: 1, justifyContent: "flex-end" },
   empty: { textAlign: "center", fontFamily: "Inter_400Regular", fontSize: 14, lineHeight: 20, marginVertical: space.lg },

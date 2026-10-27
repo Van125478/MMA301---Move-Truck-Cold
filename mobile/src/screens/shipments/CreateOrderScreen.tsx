@@ -2,6 +2,7 @@ import { useState } from "react";
 import * as ImagePicker from "expo-image-picker";
 import { KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { ChoiceChip } from "../../components/common/Feedback";
+import { DateTimeWheelFields } from "../../components/common/DateTimeWheelFields";
 import { Field } from "../../components/common/Field";
 import { FieldError } from "../../components/common/FieldError";
 import { PrimaryButton } from "../../components/common/PrimaryButton";
@@ -256,9 +257,20 @@ function PlaceFields({
       <Field label={contactLabel} value={draft[contact]} onChangeText={(value) => onChange(contact, value)} error={errors[contact] ?? null} autoCapitalize="words" />
       <Field label={phoneLabel} value={draft[phone]} onChangeText={(value) => onChange(phone, value)} error={errors[phone] ?? null} keyboardType="phone-pad" />
       <Field label={`${emailLabel} (không bắt buộc)`} value={draft[email]} onChangeText={(value) => onChange(email, value)} error={errors[email] ?? null} keyboardType="email-address" autoComplete="email" />
-      <Field label={`${dateLabel} (năm-tháng-ngày)`} value={draft[date]} onChangeText={(value) => onChange(date, value)} error={errors[date] ?? null} placeholder="2026-10-30" keyboardType="numbers-and-punctuation" maxLength={10} />
-      <Field label={`${fromLabel} (giờ:phút)`} value={draft[from]} onChangeText={(value) => onChange(from, value)} error={errors[from] ?? null} placeholder="08:00" keyboardType="numbers-and-punctuation" maxLength={5} />
-      <Field label={`${toLabel} (giờ:phút)`} value={draft[to]} onChangeText={(value) => onChange(to, value)} error={errors[to] ?? null} placeholder="11:00" keyboardType="numbers-and-punctuation" maxLength={5} />
+      <DateTimeWheelFields
+        dateLabel={dateLabel}
+        fromLabel={fromLabel}
+        toLabel={toLabel}
+        dateValue={draft[date]}
+        fromValue={draft[from]}
+        toValue={draft[to]}
+        dateError={errors[date] ?? null}
+        fromError={errors[from] ?? null}
+        toError={errors[to] ?? null}
+        onDateChange={(value) => onChange(date, value)}
+        onFromChange={(value) => onChange(from, value)}
+        onToChange={(value) => onChange(to, value)}
+      />
     </View>
   );
 }
