@@ -5,4 +5,5 @@ export type RootStackParamList = {
   ResetPassword: { email: string; resetCode?: string };
   ChangePassword: undefined;
   Home: undefined;
+  ShipmentList: undefined;
 };

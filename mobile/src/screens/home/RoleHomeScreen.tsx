@@ -1,9 +1,13 @@
+import { useNavigation } from "@react-navigation/native";
+import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useState } from "react";
 import { Pressable, StyleSheet, Text, useWindowDimensions, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { BrandHeader } from "../../components/brand/Wordmark";
+import { PrimaryButton } from "../../components/common/PrimaryButton";
 import { panelChrome, space, type as textType, useTheme } from "../../constants/theme";
 import { useAuth } from "../../features/auth/AuthProvider";
+import type { RootStackParamList } from "../../navigation/types";
 import type { UserRole } from "../../types/auth";
 
 const roleCopy: Record<UserRole, { label: string; work: string }> = {
@@ -29,6 +33,7 @@ export function RoleHomeScreen() {
   const { colors } = useTheme();
   const { width } = useWindowDimensions();
   const { session, logout } = useAuth();
+  const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const [leaving, setLeaving] = useState(false);
   const gutter = width >= 768 ? space.xxl : space.lg;
   const cardWidth = Math.min(width - gutter * 2, 440);
@@ -52,6 +57,9 @@ export function RoleHomeScreen() {
             </View>
             <Text style={[styles.name, { color: colors.ink }]}>{name}</Text>
             <Text style={[styles.work, { color: colors.muted }]}>{role.work}</Text>
+            {user.role === "SHIPPER" ? (
+              <PrimaryButton label="Xem đơn hàng của tôi" onPress={() => navigation.navigate("ShipmentList")} />
+            ) : null}
           </View>
           <Pressable
             accessibilityRole="button"

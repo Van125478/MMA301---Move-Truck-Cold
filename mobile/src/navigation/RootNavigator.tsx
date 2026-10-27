@@ -9,6 +9,7 @@ import { LoginScreen } from "../screens/auth/LoginScreen";
 import { RegisterScreen } from "../screens/auth/RegisterScreen";
 import { ResetPasswordScreen } from "../screens/auth/ResetPasswordScreen";
 import { RoleHomeScreen } from "../screens/home/RoleHomeScreen";
+import { ShipmentListScreen } from "../screens/shipments/ShipmentListScreen";
 import { SessionGate } from "../screens/SessionGate";
 import type { RootStackParamList } from "./types";
 
@@ -62,7 +63,10 @@ export function RootNavigator() {
         ) : mustChange ? (
           <Stack.Screen name="ChangePassword" component={ChangePasswordScreen} />
         ) : (
-          <Stack.Screen name="Home" component={RoleHomeScreen} />
+          <>
+            <Stack.Screen name="Home" component={RoleHomeScreen} />
+            <Stack.Screen name="ShipmentList" component={ShipmentListScreen} />
+          </>
         )}
       </Stack.Navigator>
     </NavigationContainer>
