@@ -36,6 +36,7 @@ export type PublishBody = {
   temperatureGroup: "COOL" | "FROZEN" | "DEEP_FROZEN";
   vehicleRequirement: string;
   listedPriceVnd: number;
+  cargoImageIds: string[];
 };
 
 export type ListMode = "mine" | "board" | "claimed" | "driver";

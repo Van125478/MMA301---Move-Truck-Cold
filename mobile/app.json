@@ -33,6 +33,12 @@
       "expo-secure-store",
       "expo-font",
       [
+        "expo-image-picker",
+        {
+          "photosPermission": "Coldi dùng ảnh thư viện để đính kèm hàng hóa khi đăng đơn."
+        }
+      ],
+      [
         "expo-location",
         {
           "locationWhenInUsePermission": "Coldi dùng vị trí để tài xế gửi GPS của chuyến đang chạy."

@@ -52,6 +52,7 @@ export type Shipment = {
   temperatureLabel: string;
   vehicleRequirement: string;
   listedPriceVnd: number;
+  cargoImageIds: string[];
   status: ShipmentStatus;
   statusLabel: string;
   carrierId: string | null;
@@ -76,6 +77,8 @@ export type FleetVehicle = {
   label: string;
   plate: string | null;
   temperatureLabel: string | null;
+  status: "ACTIVE" | "ARCHIVED";
+  statusLabel: string;
   availableForAssignment: boolean;
 };
 
@@ -114,6 +117,15 @@ function requiredText(record: Record<string, unknown>, key: string): string {
   const value = text(record[key]);
   if (!value) throw invalid;
   return value;
+}
+
+function imageIds(value: unknown): string[] {
+  if (!Array.isArray(value)) return [];
+  return value.flatMap((item) => {
+    if (typeof item === "string") return [item];
+    if (typeof item === "object" && item !== null && typeof (item as { id?: unknown }).id === "string") return [(item as { id: string }).id];
+    return [];
+  });
 }
 
 function numberOrNull(value: unknown): number | null {
@@ -175,6 +187,7 @@ export function parseShipment(value: unknown): Shipment {
     temperatureLabel: text(record.temperatureLabel) ?? temperatureGroup,
     vehicleRequirement: text(record.vehicleRequirement) ?? "",
     listedPriceVnd: price,
+    cargoImageIds: imageIds(record.cargoImages),
     status: status as ShipmentStatus,
     statusLabel: text(record.statusLabel) ?? status,
     carrierId: text(record.carrierId),
@@ -243,6 +256,8 @@ function parseVehicle(value: unknown): FleetVehicle[] {
       label,
       plate: text(row.plate),
       temperatureLabel: text(row.temperatureLabel),
+      status: row.status === "ARCHIVED" ? "ARCHIVED" : "ACTIVE",
+      statusLabel: text(row.statusLabel) ?? (row.status === "ARCHIVED" ? "Đã lưu trữ" : "Đang hoạt động"),
       availableForAssignment: row.availableForAssignment === true,
     },
   ];

@@ -24,11 +24,13 @@ import {
   loadFleet,
   loadShipment,
   loadTracking,
-  reportDriverLocation,
 } from "../../services/api/shipments";
-import { readDeviceFix } from "../../services/location/deviceFix";
+import { startLiveShare, stopLiveShare } from "../../services/location/liveShare";
 import type { FleetDriver, FleetVehicle, Shipment, TrackingView } from "../../types/shipment";
+import { LocationMap } from "../../components/shipment/LocationMap";
 import { ReviewSection } from "../../components/shipment/ReviewSection";
+import { ShipmentChat } from "../../components/shipment/ShipmentChat";
+import { ShipmentIncidents } from "../../components/shipment/ShipmentIncidents";
 import { cargoHeroImage } from "../../utils/cargoHeroImage";
 import { formatVnd, formatWhen, formatWindow } from "../../utils/format";
 
@@ -74,7 +76,6 @@ function ShipmentDetailBody({
   const [vehicleId, setVehicleId] = useState<string | null>(null);
   const [driverId, setDriverId] = useState<string | null>(null);
   const [fleetNote, setFleetNote] = useState<string | null>(null);
-  const [sharingGps, setSharingGps] = useState(false);
   const role = session.status === "authenticated" ? session.user.role : null;
 
   const load = useCallback(async () => {
@@ -87,6 +88,7 @@ function ShipmentDetailBody({
       setShipment(next);
       setError(null);
       await refreshSaved.current(next);
+      if (role === "DRIVER" && next.status === "IN_TRANSIT") startLiveShare(next.id);
       if ((role === "SHIPPER" || role === "CARRIER" || role === "DRIVER") && next.status === "IN_TRANSIT") {
         try {
           setTracking(await loadTracking(role, next.id));
@@ -140,6 +142,8 @@ function ShipmentDetailBody({
                 : await assignShipment(shipment.id, vehicleId ?? "", driverId ?? "");
       setShipment(next);
       setConfirm(null);
+      if (role === "DRIVER" && action === "pickup" && next.status === "IN_TRANSIT") startLiveShare(next.id);
+      if (role === "DRIVER" && action === "delivery") stopLiveShare();
       await favorites.refreshSaved(next);
     } catch (caught) {
       if (caught instanceof ApiError && caught.status === 401) {
@@ -238,6 +242,12 @@ function ShipmentDetailBody({
           {shipment.driverName ? <Fact label="Tài xế" value={shipment.driverName} /> : null}
         </Section>
 
+        {role === "SHIPPER" || role === "CARRIER" ? (
+          shipment.status !== "PUBLISHED" && shipment.status !== "CANCELLED" ? (
+            <ShipmentChat shipmentId={shipment.id} role={role} />
+          ) : null
+        ) : null}
+        {role && role !== "ADMIN" ? <ShipmentIncidents shipmentId={shipment.id} role={role} /> : null}
         <ReviewSection
           shipmentId={shipment.id}
           canWrite={role === "SHIPPER" && (shipment.status === "DELIVERY_CONFIRMED" || shipment.status === "COMPLETED") && shipment.carrierId != null}
@@ -262,28 +272,14 @@ function ShipmentDetailBody({
           <Section title="Vị trí xe">
             <Text style={[styles.eventMeta, { color: colors.ink }]}>{tracking?.phaseLabel ?? "Chưa xem được vị trí xe."}</Text>
             {tracking?.latitude != null && tracking.longitude != null ? (
-              <Text style={[styles.eventMeta, { color: colors.muted }]}>
-                {tracking.latitude.toFixed(5)}, {tracking.longitude.toFixed(5)}
-              </Text>
+              <LocationMap latitude={tracking.latitude} longitude={tracking.longitude} />
             ) : (
-              <Text style={[styles.eventMeta, { color: colors.muted }]}>Chưa có tọa độ. Tài xế gửi vị trí khi chuyến đang chạy.</Text>
+              <Text style={[styles.eventMeta, { color: colors.muted }]}>Đang chờ tọa độ đầu tiên sau khi lấy hàng.</Text>
             )}
             {role === "DRIVER" ? (
-              <PrimaryButton
-                spaced={false}
-                label={sharingGps ? "Đang gửi vị trí…" : "Gửi vị trí GPS"}
-                pending={sharingGps}
-                pendingLabel="Đang gửi vị trí…"
-                onPress={() => {
-                  setSharingGps(true);
-                  setActionError(null);
-                  void readDeviceFix()
-                    .then((fix) => reportDriverLocation(shipment.id, fix))
-                    .then((next) => setTracking(next))
-                    .catch((caught) => setActionError(caught instanceof Error ? caught.message : "Không gửi được vị trí."))
-                    .finally(() => setSharingGps(false));
-                }}
-              />
+              <Text style={[styles.eventMeta, { color: colors.ink }]}>
+                Định vị đang được chia sẻ. Tài xế không tắt được. Chỉ dừng khi hàng đã giao.
+              </Text>
             ) : null}
           </Section>
         ) : null}
@@ -327,6 +323,7 @@ function ShipmentDetailBody({
           </Section>
         ) : null}
 
+        {actionError ? <FieldError message={actionError} /> : null}
         {canClaim ? <PrimaryButton label="Nhận chuyến" onPress={() => setConfirm("claim")} /> : null}
         {canPickup ? <PrimaryButton label="Xác nhận đã lấy hàng" onPress={() => setConfirm("pickup")} /> : null}
         {canDeliver ? <PrimaryButton label="Xác nhận đã giao hàng" onPress={() => setConfirm("delivery")} /> : null}

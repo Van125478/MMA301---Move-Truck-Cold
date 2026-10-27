@@ -120,6 +120,43 @@ async function webRequest(path: string, options: RequestOptions): Promise<RawRes
   }
 }
 
+export async function uploadBinary(path: string, bytes: ArrayBuffer, contentType: string, sessionToken: string | null): Promise<unknown> {
+  const raw = Platform.OS === "web"
+    ? await webBinary(path, bytes, contentType)
+    : await nativeBinary(path, bytes, contentType, sessionToken);
+  if (raw.status < 200 || raw.status >= 300) throw readError(raw.status, raw.body);
+  return raw.body;
+}
+
+function nativeBinary(path: string, bytes: ArrayBuffer, contentType: string, sessionToken: string | null): Promise<RawResponse> {
+  return new Promise((resolve, reject) => {
+    const xhr = new XMLHttpRequest();
+    xhr.open("POST", `${apiOrigin}${path}`);
+    xhr.timeout = TIMEOUT_MS;
+    xhr.setRequestHeader("Accept", "application/json");
+    xhr.setRequestHeader("Content-Type", contentType);
+    if (sessionToken) xhr.setRequestHeader("Cookie", `coldi_session=${sessionToken}`);
+    xhr.onload = () => resolve({ status: xhr.status, body: parseJson(xhr.responseText), setCookie: readSetCookie(xhr) });
+    xhr.onerror = () => reject(networkError());
+    xhr.ontimeout = () => reject(networkError());
+    xhr.send(bytes);
+  });
+}
+
+async function webBinary(path: string, bytes: ArrayBuffer, contentType: string): Promise<RawResponse> {
+  try {
+    const response = await fetch(`${apiOrigin}${path}`, {
+      method: "POST",
+      credentials: "include",
+      headers: { Accept: "application/json", "Content-Type": contentType },
+      body: bytes,
+    });
+    return { status: response.status, body: parseJson(await response.text()), setCookie: null };
+  } catch {
+    throw networkError();
+  }
+}
+
 export async function apiRequest<T>(path: string, options: RequestOptions = {}): Promise<ApiResult<T>> {
   const raw = Platform.OS === "web" ? await webRequest(path, options) : await nativeRequest(path, options);
   if (raw.status < 200 || raw.status >= 300) throw readError(raw.status, raw.body);

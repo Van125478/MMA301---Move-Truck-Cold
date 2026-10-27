@@ -1,5 +1,5 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { shipmentStatuses, type Shipment, type ShipmentStatus } from "../../types/shipment";
+import { shipmentStatuses, temperatureGroups, type Shipment, type ShipmentStatus, type TemperatureGroup } from "../../types/shipment";
 
 export type FavoriteRecord = {
   id: string;
@@ -9,6 +9,7 @@ export type FavoriteRecord = {
   pickupDate: string | null;
   pickupTimeFrom: string | null;
   pickupTimeTo: string | null;
+  temperatureGroup: TemperatureGroup;
   temperatureLabel: string;
   status: ShipmentStatus;
   statusLabel: string;
@@ -29,6 +30,7 @@ export function favoriteFrom(shipment: Shipment): FavoriteRecord {
     pickupDate: shipment.pickupDate,
     pickupTimeFrom: shipment.pickupTimeFrom,
     pickupTimeTo: shipment.pickupTimeTo,
+    temperatureGroup: shipment.temperatureGroup,
     temperatureLabel: shipment.temperatureLabel,
     status: shipment.status,
     statusLabel: shipment.statusLabel,
@@ -61,6 +63,15 @@ function parseList(raw: string | null): FavoriteRecord[] {
       }
       if (typeof row.listedPriceVnd !== "number") continue;
       const status = typeof row.status === "string" && shipmentStatuses.includes(row.status as ShipmentStatus) ? (row.status as ShipmentStatus) : "PUBLISHED";
+      const temperatureLabel = typeof row.temperatureLabel === "string" ? row.temperatureLabel : "";
+      const storedGroup = typeof row.temperatureGroup === "string" ? row.temperatureGroup : "";
+      const temperatureGroup: TemperatureGroup = temperatureGroups.includes(storedGroup as TemperatureGroup)
+        ? (storedGroup as TemperatureGroup)
+        : temperatureLabel.includes("Cực lạnh")
+          ? "DEEP_FROZEN"
+          : temperatureLabel.includes("Đông")
+            ? "FROZEN"
+            : "COOL";
       seen.add(row.id);
       items.push({
         id: row.id,
@@ -70,7 +81,8 @@ function parseList(raw: string | null): FavoriteRecord[] {
         pickupDate: typeof row.pickupDate === "string" ? row.pickupDate : null,
         pickupTimeFrom: typeof row.pickupTimeFrom === "string" ? row.pickupTimeFrom : null,
         pickupTimeTo: typeof row.pickupTimeTo === "string" ? row.pickupTimeTo : null,
-        temperatureLabel: typeof row.temperatureLabel === "string" ? row.temperatureLabel : "",
+        temperatureGroup,
+        temperatureLabel,
         status,
         statusLabel: typeof row.statusLabel === "string" ? row.statusLabel : "",
         listedPriceVnd: row.listedPriceVnd,

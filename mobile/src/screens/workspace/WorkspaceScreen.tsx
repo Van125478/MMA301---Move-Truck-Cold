@@ -1,10 +1,13 @@
-import { useState, type ReactNode } from "react";
+import { useCallback, useState, type ReactNode } from "react";
+import { useFocusEffect } from "@react-navigation/native";
 import { StyleSheet, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { PhoneFrame } from "../../components/common/PhoneFrame";
 import { ScreenTopBar } from "../../components/layout/ScreenTopBar";
 import { TabBar, type TabItem } from "../../components/navigation/TabBar";
 import { space, useTheme } from "../../constants/theme";
+import { listShipments } from "../../services/api/shipments";
+import { liveShareStartedAt, startLiveShare, stopLiveShare } from "../../services/location/liveShare";
 import { useAuth } from "../../features/auth/AuthProvider";
 import type { UserRole } from "../../types/auth";
 import { AccountScreen } from "../account/AccountScreen";
@@ -34,6 +37,30 @@ const driverTabs: TabItem[] = [
 ];
 
 const adminTabs: TabItem[] = [{ id: "account", label: "Tài khoản", icon: "account-outline" }];
+
+function DriverLiveShare() {
+  const { session } = useAuth();
+  const role = session.status === "authenticated" ? session.user.role : null;
+  useFocusEffect(
+    useCallback(() => {
+      if (role !== "DRIVER") return;
+      let cancel = false;
+      const requestedAt = Date.now();
+      void listShipments("driver")
+        .then((rows) => {
+          if (cancel) return;
+          const live = rows.find((row) => row.status === "IN_TRANSIT");
+          if (live) startLiveShare(live.id);
+          else if (liveShareStartedAt() < requestedAt) stopLiveShare();
+        })
+        .catch(() => undefined);
+      return () => {
+        cancel = true;
+      };
+    }, [role]),
+  );
+  return null;
+}
 
 function Pane({ visible, children }: { visible: boolean; children: ReactNode }) {
   return (
@@ -70,6 +97,7 @@ export function WorkspaceScreen() {
   return (
     <SafeAreaView edges={["top", "left", "right"]} style={[styles.safe, { backgroundColor: colors.background }]}>
       <PhoneFrame style={styles.frame}>
+        {role === "DRIVER" ? <DriverLiveShare /> : null}
         <View style={styles.shell}>
           {detailId ? null : <ScreenTopBar />}
           <View style={styles.body}>

@@ -1,4 +1,5 @@
 import { memo } from "react";
+import { vehicleKindLabel } from "../../utils/catalog";
 import { cargoHeroImage } from "../../utils/cargoHeroImage";
 import { formatPickupShort } from "../../utils/format";
 import type { Shipment } from "../../types/shipment";
@@ -12,12 +13,13 @@ type CardProps = {
 };
 
 function vehicleLine(shipment: Shipment): string | null {
-  const parts: string[] = [];
-  if (shipment.vehicleRequirement.trim()) parts.push(shipment.vehicleRequirement);
-  else parts.push("Xe lạnh");
+  const kind = vehicleKindLabel(shipment.temperatureGroup);
+  const requirement = shipment.vehicleRequirement.trim();
+  const generic = requirement.length === 0 || requirement === "Xe lạnh" || requirement === "Xe đông" || requirement === "Xe cực lạnh";
+  const parts = [kind];
   if (shipment.cargoWeightTon != null) parts.push(`${shipment.cargoWeightTon} tấn`);
-  else if (shipment.temperatureLabel) parts.unshift(shipment.temperatureLabel);
-  return parts.length ? parts.join(" · ") : null;
+  if (!generic) parts.push(requirement);
+  return parts.join(" · ");
 }
 
 function toModel(shipment: Shipment): FreightCardModel {

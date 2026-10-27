@@ -4,10 +4,16 @@ export type TemperatureFilter = "ALL" | TemperatureGroup;
 
 export const temperatureFilters: readonly { id: TemperatureFilter; label: string }[] = [
   { id: "ALL", label: "Tất cả" },
-  { id: "COOL", label: "Lạnh mát" },
-  { id: "FROZEN", label: "Đông" },
-  { id: "DEEP_FROZEN", label: "Cực lạnh" },
+  { id: "COOL", label: "Xe lạnh" },
+  { id: "FROZEN", label: "Xe đông" },
+  { id: "DEEP_FROZEN", label: "Xe cực lạnh" },
 ];
+
+export function vehicleKindLabel(group: TemperatureGroup): string {
+  if (group === "FROZEN") return "Xe đông";
+  if (group === "DEEP_FROZEN") return "Xe cực lạnh";
+  return "Xe lạnh";
+}
 
 export function prepareCatalog(items: readonly Shipment[], query: string, group: TemperatureFilter): Shipment[] {
   const needle = query.trim().toLowerCase();

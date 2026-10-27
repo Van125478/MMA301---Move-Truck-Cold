@@ -1,4 +1,5 @@
 import { useState } from "react";
+import * as ImagePicker from "expo-image-picker";
 import { KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { ChoiceChip } from "../../components/common/Feedback";
 import { Field } from "../../components/common/Field";
@@ -9,6 +10,7 @@ import { radius, space, useTheme } from "../../constants/theme";
 import { emptyDraft, stepFields, validateOrder, type OrderDraft } from "../../features/shipments/validateOrder";
 import { ApiError } from "../../services/api/client";
 import { createShipment } from "../../services/api/shipments";
+import { uploadCargoImage } from "../../services/api/operations";
 import { temperatureGroups, type TemperatureGroup } from "../../types/shipment";
 
 const temperatureCopy: Record<TemperatureGroup, string> = {
@@ -26,6 +28,8 @@ export function CreateOrderScreen({ onCreated }: { onCreated: (id: string) => vo
   const [fields, setFields] = useState<Record<string, string>>({});
   const [formError, setFormError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
+  const [imageIds, setImageIds] = useState<string[]>([]);
+  const [imageNote, setImageNote] = useState<string | null>(null);
 
   function set<K extends keyof OrderDraft>(key: K, value: OrderDraft[K]) {
     setDraft((current) => ({ ...current, [key]: value }));
@@ -63,11 +67,16 @@ export function CreateOrderScreen({ onCreated }: { onCreated: (id: string) => vo
       show(result.fields, result.step, "Một số thông tin đơn chưa hợp lệ.");
       return;
     }
+    if (imageIds.length < 1 || imageIds.length > 5) {
+      show({}, 3, "Thêm từ 1 đến 5 ảnh hàng hóa.");
+      return;
+    }
     setPending(true);
     setFormError(null);
     try {
-      const created = await createShipment(result.body);
+      const created = await createShipment({ ...result.body, cargoImageIds: imageIds });
       setDraft(emptyDraft);
+      setImageIds([]);
       setStep(1);
       setFields({});
       onCreated(created.id);
@@ -155,6 +164,17 @@ export function CreateOrderScreen({ onCreated }: { onCreated: (id: string) => vo
             <Field label="Số thùng" value={draft.packageCount} onChangeText={(value) => set("packageCount", value.replace(/\D/g, ""))} error={shown.packageCount ?? null} keyboardType="number-pad" />
             <Field label="Yêu cầu xe" value={draft.vehicleRequirement} onChangeText={(value) => set("vehicleRequirement", value)} error={shown.vehicleRequirement ?? null} autoCapitalize="sentences" maxLength={160} />
             <Field label="Cước niêm yết (đồng)" value={draft.listedPriceVnd} onChangeText={(value) => set("listedPriceVnd", value.replace(/\D/g, ""))} error={shown.listedPriceVnd ?? null} keyboardType="number-pad" />
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Chọn ảnh hàng hóa"
+              onPress={() => void pickCargoImages(setImageIds, setImageNote)}
+              style={[styles.back, pointer, { borderColor: colors.line }]}
+            >
+              <Text style={[styles.backText, { color: colors.ink }]}>Chọn 1 đến 5 ảnh hàng</Text>
+            </Pressable>
+            <Text style={[styles.groupLabel, { color: imageNote ? colors.danger : colors.muted }]}>
+              {imageNote ?? `Đã chọn ${imageIds.length} ảnh.`}
+            </Text>
           </View>
         ) : null}
         <View style={styles.actions}>
@@ -170,6 +190,28 @@ export function CreateOrderScreen({ onCreated }: { onCreated: (id: string) => vo
       </ScrollView>
     </KeyboardAvoidingView>
   );
+}
+
+async function pickCargoImages(setIds: (ids: string[]) => void, setNote: (note: string | null) => void) {
+  const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+  if (!permission.granted) {
+    setNote("Chưa được phép đọc ảnh trên máy.");
+    return;
+  }
+  const picked = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ["images"], allowsMultipleSelection: true, selectionLimit: 5, quality: 0.7 });
+  if (picked.canceled) return;
+  try {
+    const ids: string[] = [];
+    for (const asset of picked.assets.slice(0, 5)) {
+      const bytes = await (await fetch(asset.uri)).arrayBuffer();
+      const type = asset.mimeType === "image/png" ? "image/png" : asset.mimeType === "image/webp" ? "image/webp" : "image/jpeg";
+      ids.push(await uploadCargoImage(bytes, type));
+    }
+    setIds(ids);
+    setNote(null);
+  } catch (error) {
+    setNote(error instanceof Error ? error.message : "Không tải được ảnh.");
+  }
 }
 
 function PlaceFields({

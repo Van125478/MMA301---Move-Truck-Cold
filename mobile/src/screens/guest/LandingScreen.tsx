@@ -7,6 +7,7 @@ import { ChoiceChip, ErrorState, LoadingBlock, SearchField } from "../../compone
 import { PhoneFrame } from "../../components/common/PhoneFrame";
 import { PrimaryButton } from "../../components/common/PrimaryButton";
 import { MarketingSectionHead } from "../../components/layout/MarketingSectionHead";
+import { DomesticDieselCard } from "../../components/market/DomesticDieselCard";
 import { ScreenTopBar } from "../../components/layout/ScreenTopBar";
 import { GuestTabBar } from "../../components/navigation/GuestTabBar";
 import { ShipmentCard } from "../../components/shipment/ShipmentCard";
@@ -85,7 +86,8 @@ export function LandingScreen() {
                       <ChoiceChip key={item.id} label={item.label} selected={group === item.id} onPress={() => setGroup(item.id)} />
                     ))}
                   </ScrollView>
-                  <PrimaryButton spaced={false} label="Đăng nhập để đăng đơn" onPress={() => navigation.navigate("Login")} />
+                  <DomesticDieselCard />
+                <PrimaryButton spaced={false} label="Đăng nhập để đăng đơn" onPress={() => navigation.navigate("Login")} />
                   <MarketingSectionHead title="Đơn đang tìm xe" count={visible.length} />
                   {error ? (
                     <Text accessibilityRole="alert" style={[styles.error, { color: colors.danger }]}>

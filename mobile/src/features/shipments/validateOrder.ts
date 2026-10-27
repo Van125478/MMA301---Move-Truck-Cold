@@ -234,6 +234,7 @@ export function validateOrder(draft: OrderDraft): { ok: true; body: PublishBody 
       temperatureGroup,
       vehicleRequirement,
       listedPriceVnd,
+      cargoImageIds: [],
     },
   };
 }
