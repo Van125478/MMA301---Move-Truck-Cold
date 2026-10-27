@@ -62,26 +62,49 @@ npm ci
 
 ## 2. Nối MongoDB
 
-API đọc `MONGODB_URI` trong `server\.env`. Git không nhận file này.
+API đọc `server\.env` trên chính máy đang chạy. Git không nhận file này. Gửi file `.env` cho máy khác không gửi theo database. `127.0.0.1` trong `MONGODB_URI` là MongoDB của máy đó.
+
+Chỉ tạo file khi `server\.env` chưa có. `Copy-Item .env.example .env` ghi đè file đang có, kể cả file vừa được gửi sang, và để `AUTH_SECRET` trống.
 
 ```powershell
 cd server
 Copy-Item .env.example .env
 ```
 
-Sửa thành:
+Mở `server\.env`, điền trước khi chạy API:
 
 ```text
 PORT=4000
 MONGODB_URI=mongodb://127.0.0.1:27017/move_truck
 FRONTEND_ORIGIN=http://127.0.0.1:5173
 NODE_ENV=development
-AUTH_SECRET=
+AUTH_SECRET=một chuỗi tự đặt, ít nhất 32 ký tự
+DEMO_SHIPPER_PASSWORD=một mật khẩu tự đặt, 8 đến 72 ký tự
+DEMO_CARRIER_PASSWORD=một mật khẩu tự đặt, 8 đến 72 ký tự
+DEMO_DRIVER_PASSWORD=một mật khẩu tự đặt, 8 đến 72 ký tự
+DEMO_ADMIN_PASSWORD=một mật khẩu tự đặt, 8 đến 72 ký tự
 ```
 
-`AUTH_SECRET` mỗi người tự đặt, ít nhất 32 ký tự.
+`npm ci` chỉ cài thư viện. `AUTH_SECRET` còn trống thì `npm run dev` dừng với `Missing required environment variable AUTH_SECRET.` Chuỗi ngắn hơn 32 ký tự thì báo `AUTH_SECRET must be at least 32 characters.`
 
-Tên database dùng `move_truck`. `npm run seed:demo` từ chối database tên `coldi`, `admin`, `local`, hoặc `config`.
+Tên database trong URI nên là `move_truck`. `npm run seed:demo` từ chối database tên `coldi`, `admin`, `local`, hoặc `config`. Database tên `coldi_demo_local` cũng bị từ chối, log là `Refusing to write demo accounts on database coldi_demo_local.`, trừ khi `.env` có thêm đúng dòng:
+
+```text
+DEMO_CREDENTIAL_SYNC_DATABASE=coldi_demo_local
+```
+
+`npm run seed:fleet` cần bốn tài khoản demo đã có. Nếu `seed:demo` vừa bị từ chối, fleet báo `Demo carrier and driver accounts must exist.`
+
+Nếu file `.env` copy từ máy khác có `CARGO_IMAGE_DIR` hoặc `INCIDENT_EVIDENCE_DIR` trỏ vào thư mục của người đó, đăng nhập vẫn chạy. Ảnh hàng hóa chỉ dùng được sau khi đổi hai đường đó sang thư mục thật trên máy này, hoặc xóa hai dòng đó.
+
+`seed:demo` tạo tài khoản còn thiếu và không đổi mật khẩu tài khoản đã có. Muốn ghi lại mật khẩu theo `.env`, đặt cả hai dòng sau cho đúng database đang nối, rồi chạy lại `seed:demo`:
+
+```text
+DEMO_CREDENTIAL_SYNC=confirm
+DEMO_CREDENTIAL_SYNC_DATABASE=move_truck
+```
+
+Với database `coldi_demo_local`, dòng thứ hai phải là `coldi_demo_local`.
 
 Chỉ một MongoDB nghe cổng `27017`.
 
@@ -110,22 +133,23 @@ Log cần có `MongoDB connected.` Kiểm tra:
 Invoke-RestMethod http://127.0.0.1:4000/api/health
 ```
 
-`database : connected` là đã nối được.
-
-Tài khoản thử, chỉ trên database `move_truck`. Điền mật khẩu 8–72 ký tự cho bốn biến `DEMO_*_PASSWORD` trong `.env`, rồi:
+`database : connected` là đã nối được. Giữ cửa sổ này mở. Mở terminal khác, vẫn trong `server`:
 
 ```powershell
-cd server
 npm run seed:demo
 npm run seed:fleet
 ```
 
-| Email | Vai |
-| --- | --- |
-| `shipper.demo@coldi.local` | Chủ hàng |
-| `carrier.demo@coldi.local` | Nhà xe |
-| `driver.demo@coldi.local` | Tài xế |
-| `admin.demo@coldi.local` | Quản trị |
+Thành công khi thấy `Created demo SHIPPER account shipper.demo@coldi.local.` và `Prepared one demo vehicle and linked the demo driver to the demo carrier.` Nếu tài khoản đã có từ trước, dòng sẽ là `Kept existing SHIPPER account ... Password was not changed.`
+
+Đăng nhập bằng email trong bảng và đúng chữ sau dấu `=` của biến mật khẩu cùng hàng. Gõ nguyên tên biến, ví dụ `DEMO_SHIPPER_PASSWORD`, thì API trả câu sai mật khẩu.
+
+| Email | Biến mật khẩu | Vai |
+| --- | --- | --- |
+| `shipper.demo@coldi.local` | `DEMO_SHIPPER_PASSWORD` | Chủ hàng |
+| `carrier.demo@coldi.local` | `DEMO_CARRIER_PASSWORD` | Nhà xe |
+| `driver.demo@coldi.local` | `DEMO_DRIVER_PASSWORD` | Tài xế |
+| `admin.demo@coldi.local` | `DEMO_ADMIN_PASSWORD` | Quản trị |
 
 ## 3. Bắt đầu app mobile
 

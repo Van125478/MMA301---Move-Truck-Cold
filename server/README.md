@@ -22,10 +22,15 @@ Thư mục này là `server`, không phải thư mục gốc của kho.
 cd server
 npm ci
 Copy-Item .env.example .env
+```
+
+`Copy-Item` chỉ dùng khi `server\.env` chưa có. Lệnh này ghi đè file đang có. Sửa `.env` trước `npm run dev`: điền `AUTH_SECRET` ít nhất 32 ký tự và bốn `DEMO_*_PASSWORD` từ 8 đến 72 ký tự. `MONGODB_URI` để database `move_truck`. `127.0.0.1` là MongoDB trên máy này. `npm ci` không đọc `.env`. `AUTH_SECRET` trống thì `npm run dev` báo `Missing required environment variable AUTH_SECRET.`
+
+```powershell
 npm run dev
 ```
 
-Sửa `.env` trước `npm run dev`. Biến bắt buộc, kiểm tra trong `src/config/env.ts`:
+Biến bắt buộc, kiểm tra trong `src/config/env.ts`:
 
 | Biến | Ràng buộc |
 | --- | --- |
@@ -67,7 +72,7 @@ Thiếu biến thì API không lên, báo `Missing required environment variable
 
 `npm test` đổi tên database sang các tên `*_test` và từ chối nếu tên nối không khớp. Không xóa database `coldi`. Không seed trong test.
 
-`npm run seed:demo` ghi lại `passwordHash` và `role` của bốn email demo. Chỉ dùng database mới hoặc database dùng một lần. Không xóa đơn. Từ chối khi `NODE_ENV=production`. `seed:fleet` chạy sau đó. Bản đã commit không có lệnh đặt lại mật khẩu demo.
+`npm run seed:demo` tạo tài khoản demo còn thiếu. Tài khoản đã có thì giữ nguyên mật khẩu, trừ khi `.env` đặt `DEMO_CREDENTIAL_SYNC=confirm` và `DEMO_CREDENTIAL_SYNC_DATABASE` đúng tên database đang nối. Lệnh từ chối database `coldi`, `admin`, `local`, `config`, và từ chối `coldi_demo_local` khi thiếu dòng xác nhận tên đó. Log từ chối là `Refusing to write demo accounts on database ...`. Không xóa đơn. Từ chối khi `NODE_ENV=production`. `seed:fleet` chạy sau đó và cần tài khoản nhà xe cùng tài xế demo đã có. Bản đã commit không có lệnh đặt lại mật khẩu demo.
 
 Kết quả test của lượt chuẩn bị trước tài liệu người mới nằm ở `docs/mvp-review/MVP_STATUS_2026-10-18.md`. Số đó không phải nghiệm thu trình duyệt.
 
