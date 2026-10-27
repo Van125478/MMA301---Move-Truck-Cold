@@ -16,6 +16,7 @@
     "seed:demo": "tsx src/scripts/seedDemoUsers.ts",
     "migrate:user-identity-indexes": "tsx src/scripts/migrateUserIdentityIndexes.ts",
     "seed:fleet": "tsx src/scripts/seedDemoFleet.ts",
+    "demo:fleet:status": "tsx src/scripts/printDemoFleetSummary.ts",
     "seed:shipments": "tsx src/scripts/seedDemoShipments.ts"
   },
   "dependencies": {

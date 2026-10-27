@@ -68,7 +68,7 @@ Thiếu biến thì API không lên, báo `Missing required environment variable
 | `npm run build` | Biên TypeScript ra `dist` |
 | `npm start` | Chạy bản đã build |
 | `npm run seed:demo` | Tạo hoặc cập nhật bốn tài khoản demo |
-| `npm run seed:fleet` | Gắn tài xế demo với nhà xe demo, tạo một xe demo nếu chưa có |
+| `npm run seed:fleet` | Gắn tài xế demo với nhà xe demo, tạo thêm 5 tài xế `driver2`–`driver6` và xe tương ứng |
 
 `npm test` đổi tên database sang các tên `*_test` và từ chối nếu tên nối không khớp. Không xóa database `coldi`. Không seed trong test.
 
