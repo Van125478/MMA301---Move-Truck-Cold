@@ -15,6 +15,7 @@ import { toTrackingDto } from "../gps/trackingView.js";
 import { attachTimeline, shipmentEventUpdate } from "../shipments/shipmentEvents.js";
 import { attachReservedCargoImages, releaseCargoReservation, reserveCargoImages } from "../shipments/cargoImages.js";
 import { readPublishInput } from "../shipments/publishInput.js";
+import { orderNoticeBody, recordOrderNotice } from "../orders/notices.js";
 
 export const shipmentRouter = Router();
 
@@ -65,6 +66,13 @@ shipmentRouter.post("/", requireTrustedOrigin, async (request, response, next) =
       }
     })();
     if (shipperSnapshot) await rememberEstimated(shipment._id.toString(), shipperSnapshot);
+    await recordOrderNotice({
+      recipientId: shipperId,
+      shipmentId: shipment._id.toString(),
+      kind: "PUBLISHED",
+      title: "Đăng đơn thành công",
+      body: orderNoticeBody(shipment.cargoDescription, shipment.pickupLocation, shipment.deliveryLocation),
+    });
     await recordSuccessfulAudit({
       action: "SHIPMENT_PUBLISHED",
       actorId: shipperId,

@@ -31,7 +31,13 @@
     },
     "plugins": [
       "expo-secure-store",
-      "expo-font"
+      "expo-font",
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "Coldi dùng vị trí để tài xế gửi GPS của chuyến đang chạy."
+        }
+      ]
     ]
   }
 }

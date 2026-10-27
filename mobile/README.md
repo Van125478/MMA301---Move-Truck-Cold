@@ -1,10 +1,8 @@
 # Coldi mobile
 
-App Expo cho vận tải lạnh. Phần này là nền tảng của thành viên 1: cấu hình, gọi API, đăng nhập, giữ phiên và vào đúng vai.
+App Expo cho vận tải lạnh: trang trước đăng nhập, đăng nhập, và khu làm việc theo vai.
 
-Màn danh sách đơn, nhận chuyến, tài xế và yêu thích để các thành viên khác gắn vào `src/screens` và `src/features`.
-
-Cách tự bấm nghiệm thu nằm ở [NGHIEM_THU.md](NGHIEM_THU.md).
+Cách tự bấm nghiệm thu nằm ở [NGHIEM_THU.md](NGHIEM_THU.md). Kịch bản demo nằm ở [DEMO.md](DEMO.md).
 
 ## Cài và chạy
 
@@ -29,59 +27,41 @@ API phải đang chạy và MongoDB đã nối. Xem [README.md](../README.md) �
 
 ## Đăng nhập
 
-App gọi đúng API đang có:
-
-- `POST /api/auth/register` với `{ "email", "password", "displayName", "role" }`. `role` chỉ nhận `SHIPPER` hoặc `CARRIER`. Tài khoản dùng được ngay, cookie phiên được đặt như lúc đăng nhập.
+- `POST /api/auth/register` với `{ "email", "password", "displayName", "role" }`. `role` chỉ nhận `SHIPPER` hoặc `CARRIER`.
 - `POST /api/auth/login` với `{ "email", "password" }`. `email` cũng nhận tên đăng nhập của tài xế.
 - `GET /api/auth/me` để khôi phục phiên.
 - `POST /api/auth/logout` để đăng xuất.
 - `POST /api/auth/change-required-password` với `{ "newPassword" }` khi tài khoản còn mật khẩu tạm.
+- `POST /api/auth/forgot-password` rồi `POST /api/auth/reset-password`. Máy local hiện mã trên app, không gửi email.
 
-Phiên là cookie `coldi_session`, hết hạn sau 12 giờ. Không có refresh token. Trên điện thoại, app đọc cookie đó và giữ trong Secure Store. Không lưu mật khẩu. Ô ghi nhớ đăng nhập chỉ giữ email hoặc tên đăng nhập.
+Phiên là cookie `coldi_session`. Trên điện thoại, app giữ cookie trong Secure Store. Không lưu mật khẩu. Ô ghi nhớ chỉ giữ email hoặc tên đăng nhập.
 
-Chủ hàng và nhà xe đăng ký trên màn **Đăng ký**. Tài xế và quản trị không tự đăng ký: tài xế do nhà xe cấp tại `POST /api/carrier/fleet/drivers`.
+## Trang và tab
 
-Quên mật khẩu gọi `POST /api/auth/forgot-password` với `{ "email" }`, rồi `POST /api/auth/reset-password` với `{ "email", "resetCode", "newPassword" }`. Máy chủ chưa gửi email. Khi không chạy production, mã hiện trên app nếu email thuộc tài khoản đang mở, dùng một lần trong 15 phút. Đặt lại xong, phiên cũ hết hiệu lực và phải đăng nhập bằng mật khẩu mới. Tài xế chỉ có tên đăng nhập thì nhà xe cấp lại ở `POST /api/carrier/fleet/drivers/:id/reset-password`.
+Trước đăng nhập: tab **Khám phá**, **Đăng nhập**, **Đăng ký**. Khám phá gọi `GET /api/marketplace/shipments`, lọc nhóm nhiệt, và xếp giá cao đến thấp.
 
-## API cho thành viên 2 và 3
+Sau đăng nhập, thanh trên là logo **Coldi** và chuông **Thông báo**.
 
-Các đường này đã có. App người 1 chưa vẽ màn danh sách hay nhận chuyến.
-
-| Việc | Đường | Ai được gọi |
+| Vai | Tab | Việc app làm |
 | --- | --- | --- |
-| Danh sách đơn của chủ hàng | `GET /api/shipments/mine` | SHIPPER |
-| Chi tiết đơn | `GET /api/shipments/:id` | SHIPPER, đúng chủ đơn |
-| Tạo đơn | `POST /api/shipments` | SHIPPER |
-| Hủy đơn đang tìm xe | `POST /api/shipments/:id/cancel` với `{}` | SHIPPER, chỉ khi trạng thái `PUBLISHED` |
-| Bảng chuyến nhà xe đang mở | `GET /api/carrier/shipments` | CARRIER |
-| Nhận chuyến | `POST /api/carrier/shipments/:id/claim` | CARRIER |
-| Chuyến nhà xe đã nhận | `GET /api/carrier/shipments/claimed` | CARRIER |
-| Gán xe và tài xế | `POST /api/carrier/shipments/:id/assign` | CARRIER |
-| Chuyến được giao cho tài xế | `GET /api/driver/shipments` | DRIVER |
-| Xác nhận lấy hàng | `POST /api/driver/shipments/:id/pickup` | DRIVER |
-| Xác nhận giao hàng | `POST /api/driver/shipments/:id/delivery` | DRIVER |
+| Chủ hàng | Đơn hàng, Tạo đơn, Yêu thích, Tài khoản | Đơn của mình, sàn đang tìm xe, tạo đơn, hủy đơn còn đang tìm xe, đánh giá sau khi đã giao |
+| Nhà xe | Sàn chuyến, Đã nhận, Yêu thích, Tài khoản | Xem đơn đang tìm xe, nhận chuyến, phân công xe và tài xế |
+| Tài xế | Chuyến, Yêu thích, Tài khoản | Chuyến được giao, xác nhận lấy, xác nhận giao, gửi GPS khi đang vận chuyển |
+| Quản trị | Tài khoản | Chưa có khu vận hành trên app |
 
-Hủy sau khi nhà xe đã nhận (`MATCHED` trở đi) chưa mở, vì quy tắc hủy lúc đó chưa được chốt. Yêu thích theo bài là AsyncStorage trên máy, không cần API.
+Yêu thích lưu bằng AsyncStorage theo tài khoản trên máy. Thêm hoặc bỏ từ danh sách và từ chi tiết. Mỗi mã một lần. Tab Yêu thích xóa một mục hoặc xóa tất cả.
 
-Sai mật khẩu hiện đúng câu của máy chủ. Mất mạng hiện "Không kết nối được máy chủ". Phiên hết hạn thì lần mở app sau quay về màn đăng nhập.
+Chuông mở màn **Thông báo**. Đăng đơn thành công, đơn được nhận, được giao chuyến, và sự cố đều nằm ở đó. Bấm một dòng mở đúng đơn.
 
-Sau khi đăng nhập, app đọc `role` từ máy chủ và mở màn của vai đó: chủ hàng, nhà xe, tài xế, hoặc quản trị. Quản trị chưa có khu vận hành trên app.
+## API app đang gọi
 
-## Giao diện
-
-Màn đăng nhập theo ảnh mobile trong bộ thiết kế Coldi: thẻ trắng, nhãn trên ô nhập, nút navy. Chữ dùng Inter. Màu lấy từ thương hiệu Coldi (`#1E3A8A` trên nền `#F8FAFC`), kể cả khi bảng gợi ý logistics có nút cam. Nút bấm cao ít nhất 48. Lỗi nằm dưới ô và được đọc lại. App có cả nền sáng và nền tối.
-
-## Thư mục
-
-| Đường dẫn | Việc để ở đây |
+| Việc | Đường |
 | --- | --- |
-| `App.tsx` | Nạp chữ, rồi gắn phiên và điều hướng. |
-| `src/navigation` | Stack đăng nhập và màn theo vai. |
-| `src/screens/auth` | Đăng nhập, đăng ký, quên mật khẩu, đổi mật khẩu tạm. |
-| `src/screens/home` | Màn đầu sau đăng nhập. Thành viên đơn và chuyến gắn tiếp từ đây. |
-| `src/services/api` | Hàm gọi API. Không gọi `fetch` trong màn hình. |
-| `src/features/auth` | Trạng thái phiên. |
-| `src/components` | Ô nhập, nút, lỗi. |
-| `src/constants` | Địa chỉ API và màu. |
+| Sàn công khai | `GET /api/marketplace/shipments` |
+| Đơn của chủ hàng | `GET /api/shipments/mine`, `GET /api/shipments/:id`, `POST /api/shipments`, `POST /api/shipments/:id/cancel` |
+| Nhà xe | `GET /api/carrier/shipments`, `POST .../claim`, `GET .../claimed`, `POST .../assign` |
+| Tài xế | `GET /api/driver/shipments`, `POST .../pickup`, `POST .../delivery`, `GET` và `POST .../location` |
+| Đánh giá | `GET /api/shipment-reviews/:id`, `POST /api/mobile/shipments/:id/reviews` |
+| Thông báo đơn và sự cố | `GET /api/notices`, `GET /api/notices/unread-count`, `POST /api/notices/:id/read` |
 
-`ios/` và `android/` không commit. Expo tạo hai thư mục đó khi build.
+Hủy sau khi nhà xe đã nhận chưa mở. Sửa đơn chưa có API. Quản trị chưa có khu vận hành trên app.

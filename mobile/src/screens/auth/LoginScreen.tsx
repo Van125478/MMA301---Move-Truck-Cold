@@ -18,6 +18,7 @@ import { Wordmark } from "../../components/brand/Wordmark";
 import { Field } from "../../components/common/Field";
 import { FieldError } from "../../components/common/FieldError";
 import { PrimaryButton } from "../../components/common/PrimaryButton";
+import { GuestTabBar } from "../../components/navigation/GuestTabBar";
 import { space, type as textType, useTheme } from "../../constants/theme";
 import { useAuth } from "../../features/auth/AuthProvider";
 import type { RootStackParamList } from "../../navigation/types";
@@ -97,13 +98,11 @@ export function LoginScreen() {
         <Wordmark tone="onPrimary" />
         <Text style={[styles.tagline, { color: colors.onPrimaryMuted }]}>Vận chuyển hàng lạnh</Text>
       </View>
-      <KeyboardAvoidingView
-        style={[styles.sheet, { backgroundColor: colors.surface }]}
-        behavior={Platform.OS === "ios" ? "padding" : undefined}
-      >
+      <View style={[styles.sheet, { backgroundColor: colors.surface }]}>
+        <KeyboardAvoidingView style={styles.sheetBody} behavior={Platform.OS === "ios" ? "padding" : undefined}>
         <ScrollView
           keyboardShouldPersistTaps="handled"
-          contentContainerStyle={[styles.scroll, { paddingBottom: Math.max(insets.bottom, space.xl) }]}
+          contentContainerStyle={[styles.scroll, { paddingBottom: space.xl }]}
         >
           <View style={styles.form}>
               <Text accessibilityRole="header" maxFontSizeMultiplier={1.6} style={[styles.title, { color: colors.ink }]}>
@@ -181,10 +180,20 @@ export function LoginScreen() {
                   <Text style={[styles.link, { color: colors.primary }]}>Đăng ký</Text>
                 </Pressable>
               </View>
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="Về trang giới thiệu"
+                onPress={() => navigation.navigate("Landing")}
+                style={styles.linkHit}
+              >
+                <Text style={[styles.link, { color: colors.primary }]}>Về trang giới thiệu</Text>
+              </Pressable>
               <Text style={[styles.footer, { color: colors.hint }]}>© 2026 Coldi</Text>
           </View>
         </ScrollView>
-      </KeyboardAvoidingView>
+        </KeyboardAvoidingView>
+        <GuestTabBar active="login" />
+      </View>
     </View>
   );
 }
@@ -192,7 +201,8 @@ export function LoginScreen() {
 const styles = StyleSheet.create({
   safe: { flex: 1 },
   band: { alignItems: "center", justifyContent: "flex-end" },
-  sheet: { flex: 1, marginTop: -28, borderTopLeftRadius: 28, borderTopRightRadius: 28, overflow: "hidden" },
+  sheet: { flex: 1, marginTop: -28, borderTopLeftRadius: 28, borderTopRightRadius: 28, overflow: "hidden", minHeight: 0 },
+  sheetBody: { flex: 1, minHeight: 0 },
   scroll: { flexGrow: 1, paddingHorizontal: space.xl, paddingTop: space.xl },
   form: { width: "100%", maxWidth: 440, alignSelf: "center" },
   tagline: { marginTop: space.md, fontFamily: "Inter_500Medium", fontSize: 15, lineHeight: 22 },

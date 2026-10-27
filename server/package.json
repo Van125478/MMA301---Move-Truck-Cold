@@ -15,7 +15,8 @@
     "test": "tsx --test --test-concurrency=1 tests/health.test.ts tests/auth.test.ts tests/shipment.test.ts tests/cargoImage.test.ts tests/claim.test.ts tests/assignment.test.ts tests/exclusiveAssignment.test.ts tests/driver.test.ts tests/timeline.test.ts tests/gps.test.ts tests/chat.test.ts tests/fleet.test.ts tests/security.test.ts tests/marketplace.test.ts tests/driverAccount.test.ts tests/demoSeedGuard.test.ts tests/userIndexMigration.test.ts tests/integration.test.ts tests/packageRuntime.test.ts tests/packageManagement.test.ts tests/packagePricing.test.ts tests/incidentLifecycle.test.ts tests/incident.test.ts tests/incidentReopen.test.ts tests/incidentEvidence.test.ts tests/commissionMoney.test.ts tests/commissionLifecycle.test.ts tests/commission.test.ts tests/oilPrice.test.ts tests/fuelMarket.test.ts tests/mobileCatalog.test.ts",
     "seed:demo": "tsx src/scripts/seedDemoUsers.ts",
     "migrate:user-identity-indexes": "tsx src/scripts/migrateUserIdentityIndexes.ts",
-    "seed:fleet": "tsx src/scripts/seedDemoFleet.ts"
+    "seed:fleet": "tsx src/scripts/seedDemoFleet.ts",
+    "seed:shipments": "tsx src/scripts/seedDemoShipments.ts"
   },
   "dependencies": {
     "bcryptjs": "^3.0.3",

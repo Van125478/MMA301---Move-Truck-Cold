@@ -1,6 +1,6 @@
 # Nghiệm thu phần thành viên 1
 
-Làm trên máy này, đứng ở thư mục gốc của kho vừa clone. MongoDB đang cài sẵn, không cần Docker. Mật khẩu nằm trong `server\.env`, file này không ghi mật khẩu.
+Làm trên máy này. MongoDB đang cài sẵn, không cần Docker. Mật khẩu nằm trong `server\.env`, file này không ghi mật khẩu.
 
 Đạt khi bốn tài khoản demo vào được đúng vai, sai mật khẩu có câu lỗi, đăng xuất rồi mở lại thì về màn đăng nhập, và tải lại trang khi còn phiên thì không phải đăng nhập lại.
 
@@ -9,7 +9,7 @@ Làm trên máy này, đứng ở thư mục gốc của kho vừa clone. MongoD
 Mở một cửa sổ terminal:
 
 ```powershell
-cd server
+cd C:\Coldi-Development\server
 npm run dev
 ```
 
@@ -33,7 +33,7 @@ Invoke-RestMethod http://127.0.0.1:4000/api/health
 Mở cửa sổ terminal thứ hai:
 
 ```powershell
-cd mobile
+cd C:\Coldi-Development\mobile
 npm install
 npx expo start --web --port 5173 --host lan
 ```
@@ -48,39 +48,40 @@ Expo có thể cảnh báo Node 20. App vẫn mở được. Nếu lệnh dừng
 
 Lấy mật khẩu trong `server\.env`. Mỗi biến `DEMO_*_PASSWORD` đi với email cùng hàng. Gõ đúng giá trị sau dấu `=`. Đừng gõ tên biến, ví dụ đừng gõ chữ `DEMO_SHIPPER_PASSWORD` vào ô mật khẩu.
 
-| Email | Biến mật khẩu | Màn sau khi vào |
+| Email | Biến mật khẩu | Tab Tài khoản |
 | --- | --- | --- |
-| `shipper.demo@coldi.local` | `DEMO_SHIPPER_PASSWORD` | Chủ hàng, dòng `Máy chủ trả vai: SHIPPER` |
-| `carrier.demo@coldi.local` | `DEMO_CARRIER_PASSWORD` | Nhà xe, dòng `Máy chủ trả vai: CARRIER` |
-| `driver.demo@coldi.local` | `DEMO_DRIVER_PASSWORD` | Tài xế, dòng `Máy chủ trả vai: DRIVER` |
-| `admin.demo@coldi.local` | `DEMO_ADMIN_PASSWORD` | Quản trị, dòng `Máy chủ trả vai: ADMIN` |
+| `shipper.demo@coldi.local` | `DEMO_SHIPPER_PASSWORD` | Chủ hàng |
+| `carrier.demo@coldi.local` | `DEMO_CARRIER_PASSWORD` | Nhà xe |
+| `driver.demo@coldi.local` | `DEMO_DRIVER_PASSWORD` | Tài xế |
+| `admin.demo@coldi.local` | `DEMO_ADMIN_PASSWORD` | Quản trị |
 
 ## 4. Bấm theo thứ tự
 
 Với từng tài khoản ở bảng trên:
 
-1. Ở màn **Chào mừng trở lại**, nhập email và mật khẩu đúng.
-2. Bấm **Đăng nhập**. Nút đổi thành **Đang đăng nhập…**
-3. Màn sau đó hiện đúng vai trong bảng. Dòng `Máy chủ trả vai:` phải đúng chữ vai, không phải tên tự gõ.
-4. Bấm **Đăng xuất**. Phải về màn **Chào mừng trở lại**.
+1. Ở màn đầu, dòng **Giải pháp · Chủ hàng**, bấm **Đăng nhập để đăng đơn**.
+2. Ở màn **Chào mừng trở lại**, nhập email và mật khẩu đúng.
+3. Bấm **Đăng nhập**. Nút đổi thành **Đang đăng nhập…**
+4. Màn sau đó là khu làm việc. Thanh trên là **Coldi**. Tab **Tài khoản** hiện đúng vai trong bảng và đúng email, không hiện chữ `Máy chủ trả vai`.
+5. Bấm **Đăng xuất**. Phải về trang **Giải pháp · Chủ hàng**.
 
-Sau tài khoản chủ hàng, làm thêm bốn bước này:
+Sau tài khoản chủ hàng, quay lại màn đăng nhập rồi làm thêm bốn bước này:
 
-1. Nhập đúng email chủ hàng, mật khẩu gõ `sai-mat-khau`, bấm **Đăng nhập**. Phải thấy câu `Email, tên đăng nhập hoặc mật khẩu không đúng.` Ô mật khẩu vẫn trống ý nghĩa là chưa vào được.
+1. Ở trang **Giải pháp · Chủ hàng**, bấm **Đăng nhập để đăng đơn**. Nhập đúng email chủ hàng, mật khẩu gõ `sai-mat-khau`, bấm **Đăng nhập**. Phải thấy câu `Email, tên đăng nhập hoặc mật khẩu không đúng.`
 2. Xóa hết hai ô, bấm **Đăng nhập**. Phải thấy `Còn ô chưa nhập.` và dòng đỏ dưới từng ô.
-3. Bấm **Đăng ký**. Nhập tên hiển thị, chọn **Chủ hàng**, email chưa có trong hệ thống, mật khẩu từ 8 đến 72 ký tự. Bấm **Tạo tài khoản**. Phải vào màn **Chủ hàng** và thấy `Máy chủ trả vai: SHIPPER`. Đăng xuất, rồi đăng nhập lại bằng email vừa tạo. Tài xế không có lựa chọn tự đăng ký.
-4. Vẫn dùng email vừa tạo, không dùng tài khoản demo chung. Bấm **Quên mật khẩu?**, nhập email đó, bấm **Lấy mã đặt lại**. Mã hiện trên màn vì máy local chưa gửi email. Nhập mật khẩu mới từ 8 đến 72 ký tự, bấm **Đặt lại mật khẩu**, rồi **Quay lại đăng nhập**. Đăng nhập bằng mật khẩu mới phải vào được. Đăng nhập bằng mật khẩu cũ phải thấy câu sai mật khẩu.
+3. Bấm **Đăng ký**. Nhập tên hiển thị, chọn **Chủ hàng**, email chưa có trong hệ thống, mật khẩu từ 8 đến 72 ký tự. Bấm **Tạo tài khoản**. Tab **Tài khoản** phải là **Chủ hàng**. Bấm **Đăng xuất**, rồi đăng nhập lại bằng email vừa tạo. Tài xế không có lựa chọn tự đăng ký.
+4. Vẫn dùng email vừa tạo, không dùng tài khoản demo chung. Ở màn đăng nhập, bấm **Quên mật khẩu?**, nhập email đó, bấm **Lấy mã đặt lại**. Mã hiện trên màn vì máy local chưa gửi email. Nhập mật khẩu mới từ 8 đến 72 ký tự, bấm **Đặt lại mật khẩu**, rồi **Quay lại đăng nhập**. Đăng nhập bằng mật khẩu mới phải vào được. Đăng nhập bằng mật khẩu cũ phải thấy câu sai mật khẩu.
 
 Phiên còn sống:
 
 1. Đăng nhập chủ hàng.
-2. Tải lại trang `http://127.0.0.1:5173`. Vẫn thấy **Chủ hàng** và `SHIPPER`, không thấy form đăng nhập.
-3. Bấm **Đăng xuất**, rồi tải lại trang. Phải thấy form đăng nhập.
+2. Tải lại trang `http://127.0.0.1:5173`. Vẫn ở khu làm việc, tab **Tài khoản** vẫn là **Chủ hàng**, không thấy form đăng nhập.
+3. Vào tab **Tài khoản**, bấm **Đăng xuất**, rồi tải lại trang. Phải thấy trang giới thiệu chủ hàng.
 
 Ghi nhớ đăng nhập không lưu mật khẩu:
 
 1. Tick **Ghi nhớ đăng nhập**, đăng nhập chủ hàng, rồi đăng xuất.
-2. Ô email còn `shipper.demo@coldi.local`. Ô mật khẩu trống.
+2. Bấm **Đăng nhập để đăng đơn**. Ô email còn `shipper.demo@coldi.local`. Ô mật khẩu trống.
 
 ## 5. Máy ảo Android Studio
 
@@ -97,7 +98,7 @@ EXPO_PUBLIC_API_ORIGIN=http://10.0.2.2:4000
 API trên máy tính vẫn chạy ở cổng `4000`. Rồi:
 
 ```powershell
-cd mobile
+cd C:\Coldi-Development\mobile
 npx expo start --android
 ```
 
@@ -128,4 +129,4 @@ Trên điện thoại không mở bằng trình duyệt của máy tính. Các b
 - Form báo `Không kết nối được máy chủ`: API chưa chạy, máy ảo đang trỏ `127.0.0.1` thay vì `10.0.2.2`, hoặc Expo Go chưa được cấp quyền mạng nội bộ ở mục 5.
 - Câu `Email, tên đăng nhập hoặc mật khẩu không đúng.` trong khi ô mật khẩu còn chữ `DEMO_SHIPPER_PASSWORD`: đó là tên biến. Mở `server\.env` và gõ giá trị.
 - Trình duyệt mở nhầm `localhost` rồi báo nguồn không được phép: đóng tab, mở `http://127.0.0.1:5173`.
-- Vào được mà không có dòng `Máy chủ trả vai:`: đang mở bản app cũ. Tắt Expo và chạy lại.
+- Vào được mà thanh trên không có chữ **Coldi** và chuông: đang mở bản app cũ. Tắt Expo và chạy lại.

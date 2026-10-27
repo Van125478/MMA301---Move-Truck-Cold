@@ -4,6 +4,8 @@ import { useRef, useState, type ComponentRef } from "react";
 import { KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, useWindowDimensions, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { BrandHeader } from "../../components/brand/Wordmark";
+import { PhoneFrame } from "../../components/common/PhoneFrame";
+import { GuestTabBar } from "../../components/navigation/GuestTabBar";
 import { Field } from "../../components/common/Field";
 import { FieldError } from "../../components/common/FieldError";
 import { PrimaryButton } from "../../components/common/PrimaryButton";
@@ -74,9 +76,10 @@ export function RegisterScreen() {
 
   return (
     <SafeAreaView style={[styles.safe, { backgroundColor: colors.background }]}>
-      <KeyboardAvoidingView style={styles.safe} behavior={Platform.OS === "ios" ? "padding" : undefined}>
+      <PhoneFrame style={styles.frame}>
+        <KeyboardAvoidingView style={styles.shell} behavior={Platform.OS === "ios" ? "padding" : undefined}>
         <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={[styles.page, { paddingHorizontal: gutter }]}>
-          <View style={{ width: cardWidth }}>
+          <View style={{ width: cardWidth, alignSelf: "center" }}>
             <BrandHeader />
             <View style={[styles.card, panelChrome(colors)]}>
               <Text accessibilityRole="header" style={[styles.title, { color: colors.ink }]}>
@@ -161,13 +164,17 @@ export function RegisterScreen() {
             </View>
           </View>
         </ScrollView>
-      </KeyboardAvoidingView>
+        </KeyboardAvoidingView>
+        <GuestTabBar active="register" />
+      </PhoneFrame>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
   safe: { flex: 1 },
+  frame: { flex: 1 },
+  shell: { flex: 1, minHeight: 0 },
   page: { alignItems: "center", paddingTop: space.lg, paddingBottom: space.xl },
   card: { marginTop: space.xl, padding: space.xl },
   title: { ...textType.title },

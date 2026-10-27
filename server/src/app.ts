@@ -20,6 +20,9 @@ import { incidentEvidenceRouter } from "./routes/incidentEvidence.routes.js";
 import { oilPriceRouter } from "./routes/oilPrice.routes.js";
 import { fuelMarketRouter } from "./routes/fuelMarket.routes.js";
 import { mobileRouter } from "./routes/mobile.routes.js";
+import { marketplaceBrowseRouter } from "./routes/marketplaceBrowse.routes.js";
+import { orderNoticeRouter } from "./routes/orderNotice.routes.js";
+import { shipmentReviewRouter } from "./routes/shipmentReview.routes.js";
 import { shipmentRouter } from "./routes/shipment.routes.js";
 
 export function createApp() {
@@ -55,6 +58,9 @@ export function createApp() {
   app.use("/api/incidents", incidentRouter);
   app.use("/api/market/oil-prices", oilPriceRouter);
   app.use("/api/market/fuel", fuelMarketRouter);
+  app.use("/api/marketplace", marketplaceBrowseRouter);
+  app.use("/api/notices", orderNoticeRouter);
+  app.use("/api/shipment-reviews", shipmentReviewRouter);
   if (env.NODE_ENV === "test") {
     app.get("/api/test/shipper-only", requireAuth, requireRole("SHIPPER"), (_request, response) => {
       response.status(200).json({ ok: true });

@@ -20,6 +20,8 @@ type FieldProps = {
   returnKeyType?: TextInputProps["returnKeyType"];
   onSubmitEditing?: () => void;
   maxLength?: number;
+  autoCapitalize?: TextInputProps["autoCapitalize"];
+  multiline?: boolean;
 };
 
 export function Field({
@@ -38,6 +40,8 @@ export function Field({
   returnKeyType,
   onSubmitEditing,
   maxLength,
+  autoCapitalize = "none",
+  multiline = false,
 }: FieldProps) {
   const { colors } = useTheme();
   const [focused, setFocused] = useState(false);
@@ -63,8 +67,9 @@ export function Field({
           placeholderTextColor={colors.hint}
           secureTextEntry={secureTextEntry}
           keyboardType={keyboardType}
-          autoCapitalize="none"
+          autoCapitalize={autoCapitalize}
           autoCorrect={false}
+          multiline={multiline}
           autoComplete={autoComplete}
           textContentType={textContentType}
           importantForAutofill="yes"
@@ -74,7 +79,7 @@ export function Field({
           onFocus={() => setFocused(true)}
           onBlur={() => setFocused(false)}
           accessibilityLabel={spoken}
-          style={[styles.input, { color: colors.ink }]}
+          style={[styles.input, multiline ? styles.multiline : null, { color: colors.ink }]}
         />
         {onToggleSecure ? (
           <Pressable
@@ -114,5 +119,6 @@ const styles = StyleSheet.create({
     fontFamily: "Inter_400Regular",
     fontSize: 16,
   },
+  multiline: { minHeight: 96, paddingTop: space.md, textAlignVertical: "top" },
   eye: { width: 48, height: 48, alignItems: "center", justifyContent: "center" },
 });
