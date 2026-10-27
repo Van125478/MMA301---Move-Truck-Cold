@@ -1,6 +1,14 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
 import { useAuth } from "../auth/AuthProvider";
-import { favoriteFrom, readFavorites, upsertFavorite, withoutFavorite, writeFavorites, type FavoriteRecord } from "./store";
+import {
+  favoriteFrom,
+  readFavorites,
+  upsertFavorite,
+  withoutFavorite,
+  withoutFavorites,
+  writeFavorites,
+  type FavoriteRecord,
+} from "./store";
 import type { Shipment } from "../../types/shipment";
 
 type FavoritesValue = {
@@ -9,6 +17,7 @@ type FavoritesValue = {
   has: (id: string) => boolean;
   toggle: (shipment: Shipment) => Promise<void>;
   remove: (id: string) => Promise<void>;
+  removeMany: (ids: ReadonlySet<string>) => Promise<void>;
   clearAll: () => Promise<void>;
   refreshSaved: (shipment: Shipment) => Promise<void>;
 };
@@ -64,6 +73,14 @@ export function FavoritesProvider({ children }: { children: ReactNode }) {
     [items, persist],
   );
 
+  const removeMany = useCallback(
+    async (ids: ReadonlySet<string>) => {
+      if (ids.size === 0) return;
+      await persist(withoutFavorites(items, ids));
+    },
+    [items, persist],
+  );
+
   const clearAll = useCallback(async () => {
     await persist([]);
   }, [persist]);
@@ -78,8 +95,8 @@ export function FavoritesProvider({ children }: { children: ReactNode }) {
   );
 
   const value = useMemo(
-    () => ({ ready, items, has, toggle, remove, clearAll, refreshSaved }),
-    [ready, items, has, toggle, remove, clearAll, refreshSaved],
+    () => ({ ready, items, has, toggle, remove, removeMany, clearAll, refreshSaved }),
+    [ready, items, has, toggle, remove, removeMany, clearAll, refreshSaved],
   );
 
   return <FavoritesContext.Provider value={value}>{children}</FavoritesContext.Provider>;
