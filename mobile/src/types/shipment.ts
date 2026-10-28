@@ -92,6 +92,8 @@ export type FleetDriver = {
   username: string | null;
   accountStatus: "ACTIVE" | "LOCKED";
   mustChangePassword: boolean;
+  availableForAssignment: boolean;
+  assignmentBlockReason: string | null;
 };
 
 const invalid = new ApiError(0, "invalid_response", "Máy chủ trả về đơn không đúng cấu trúc.");
@@ -295,6 +297,8 @@ function parseDriver(value: unknown): FleetDriver[] {
       username: text(row.username),
       accountStatus: row.accountStatus === "LOCKED" ? "LOCKED" : "ACTIVE",
       mustChangePassword: row.mustChangePassword === true,
+      availableForAssignment: row.availableForAssignment !== false,
+      assignmentBlockReason: text(row.assignmentBlockReason),
     },
   ];
 }

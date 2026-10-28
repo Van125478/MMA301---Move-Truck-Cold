@@ -22,11 +22,17 @@ function vehicleStateLabel(vehicle: FleetVehicle): string {
 
 function driverStateLabel(driver: FleetDriver): string {
   if (driver.accountStatus === "LOCKED") return "Tạm dừng";
-  return driverReady(driver) ? "Sẵn sàng" : "Chưa phân công được";
+  if (!driverReady(driver)) return "Chưa phân công được";
+  if (!driver.availableForAssignment) return driver.assignmentBlockReason ?? "Đang bận";
+  return "Sẵn sàng";
 }
 
 function driverReady(driver: FleetDriver): boolean {
-  return driver.accountStatus === "ACTIVE" && !driver.mustChangePassword;
+  return driver.accountStatus === "ACTIVE" && !driver.mustChangePassword && driver.availableForAssignment;
+}
+
+function driverSelectable(driver: FleetDriver): boolean {
+  return driver.accountStatus === "ACTIVE" && !driver.mustChangePassword && driver.availableForAssignment;
 }
 
 function matchQuery(text: string, query: string): boolean {
@@ -62,7 +68,7 @@ export function CarrierAssignmentSection({
   const selectedVehicle = vehicles.find((row) => row.id === vehicleId) ?? null;
   const selectedDriver = drivers.find((row) => row.id === driverId) ?? null;
   const availableVehicleCount = vehicles.filter((row) => row.availableForAssignment).length;
-  const readyDriverCount = drivers.filter(driverReady).length;
+  const readyDriverCount = drivers.filter(driverSelectable).length;
   const pickerListMaxHeight = Dimensions.get("window").height * 0.42;
 
   const sortedVehicles = useMemo(
@@ -79,9 +85,20 @@ export function CarrierAssignmentSection({
     [query, sortedVehicles],
   );
 
+  const sortedDrivers = useMemo(
+    () =>
+      [...drivers].sort((left, right) => {
+        const leftOk = driverSelectable(left);
+        const rightOk = driverSelectable(right);
+        if (leftOk === rightOk) return left.name.localeCompare(right.name);
+        return leftOk ? -1 : 1;
+      }),
+    [drivers],
+  );
+
   const filteredDrivers = useMemo(
-    () => drivers.filter((row) => matchQuery(row.name, query)),
-    [drivers, query],
+    () => sortedDrivers.filter((row) => matchQuery(row.name, query)),
+    [query, sortedDrivers],
   );
 
   function openPicker(kind: PickerKind) {
@@ -153,6 +170,7 @@ export function CarrierAssignmentSection({
             <SearchField
               hideLabel
               label={picker === "vehicle" ? "Tìm xe" : "Tìm tài xế"}
+              placeholder={picker === "vehicle" ? "Tên xe, biển số, nhóm nhiệt" : "Tên tài xế"}
               value={query}
               onChangeText={setQuery}
             />
@@ -203,7 +221,7 @@ export function CarrierAssignmentSection({
                 style={{ maxHeight: pickerListMaxHeight }}
                 ListEmptyComponent={<Text style={[styles.empty, { color: colors.muted }]}>Không có tài xế khớp tìm kiếm.</Text>}
                 renderItem={({ item }) => {
-                  const ready = driverReady(item);
+                  const ready = driverSelectable(item);
                   const selected = driverId === item.id;
                   return (
                     <Pressable

@@ -32,7 +32,15 @@ const temperatureGroups = [
   { value: "DEEP_FROZEN", label: "Cực lạnh" },
 ] as const;
 
-export function FleetScreen() {
+export function FleetScreen({
+  show = "both",
+  embedded = false,
+  onFleetChange,
+}: {
+  show?: "both" | "vehicles" | "drivers";
+  embedded?: boolean;
+  onFleetChange?: () => void;
+} = {}) {
   const { colors } = useTheme();
   const [vehicles, setVehicles] = useState<FleetVehicle[]>([]);
   const [drivers, setDrivers] = useState<FleetDriver[]>([]);
@@ -66,10 +74,11 @@ export function FleetScreen() {
       setVehicles(fleet.vehicles);
       setDrivers(fleet.drivers);
       setError(null);
+      onFleetChange?.();
     } catch (caught) {
       setError(caught instanceof ApiError ? caught.message : "Không tải được đội xe.");
     }
-  }, []);
+  }, [onFleetChange]);
 
   useFocusEffect(useCallback(() => { void load(); }, [load]));
 
@@ -149,12 +158,22 @@ export function FleetScreen() {
 
   const askCopy = ask ? dialogCopy(ask) : null;
 
+  const showVehicles = show === "both" || show === "vehicles";
+  const showDrivers = show === "both" || show === "drivers";
+
   return (
-    <View style={styles.block}>
-      <Text style={[styles.heading, { color: colors.ink }]}>Đội xe</Text>
-      <Text style={[styles.summary, { color: colors.muted }]}>{runningVehicles} xe đang chạy · {runningDrivers} tài xế đang chạy</Text>
+    <View style={[styles.block, embedded ? styles.blockEmbedded : null]}>
+      {!embedded ? (
+        <>
+          <Text style={[styles.heading, { color: colors.ink }]}>Đội xe</Text>
+          <Text style={[styles.summary, { color: colors.muted }]}>
+            {runningVehicles} xe đang chạy · {runningDrivers} tài xế đang chạy
+          </Text>
+        </>
+      ) : null}
       {error ? <FieldError message={error} /> : null}
 
+      {showVehicles ? (
       <RosterPanel
         icon="truck-outline"
         title="Xe"
@@ -214,7 +233,9 @@ export function FleetScreen() {
           <ExpandToggle expanded={vehiclesExpanded} hidden={orderedVehicles.length - previewCount} onPress={() => setVehiclesExpanded((value) => !value)} />
         ) : null}
       </RosterPanel>
+      ) : null}
 
+      {showDrivers ? (
       <RosterPanel
         icon="account-outline"
         title="Tài xế"
@@ -258,6 +279,7 @@ export function FleetScreen() {
           <ExpandToggle expanded={driversExpanded} hidden={orderedDrivers.length - previewCount} onPress={() => setDriversExpanded((value) => !value)} />
         ) : null}
       </RosterPanel>
+      ) : null}
 
       <ConfirmDialog
         visible={ask !== null}
@@ -444,6 +466,7 @@ function fieldMap(caught: unknown): Record<string, string> {
 
 const styles = StyleSheet.create({
   block: { marginTop: space.xl, gap: space.md },
+  blockEmbedded: { marginTop: 0, paddingHorizontal: space.lg, gap: space.md },
   heading: { fontFamily: "Inter_700Bold", fontSize: 20, lineHeight: 28 },
   summary: { marginTop: -space.sm, fontFamily: "Inter_400Regular", fontSize: 14, lineHeight: 20 },
   panel: { padding: space.lg, gap: space.md },

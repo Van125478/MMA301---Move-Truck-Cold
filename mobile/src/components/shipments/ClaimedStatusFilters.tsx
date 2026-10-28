@@ -5,14 +5,19 @@ import { space, useTheme } from "../../constants/theme";
 import type { Shipment } from "../../types/shipment";
 import { isCarrierAssigned } from "../../utils/shipmentDisplay";
 
-export type ClaimedStatusKey = "assign" | "running" | "done" | "cancelled";
+export type ClaimedStatusKey = "assign" | "pickup" | "running" | "done" | "cancelled";
 export type ClaimedViewFilter = ClaimedStatusKey | "all";
 
+/** Nhóm hiển thị tab Đã nhận — khớp luồng: phân công → chờ lấy (MATCHED+xe/tx) → đang chạy (sau xác nhận lấy). */
 export function claimedBucket(shipment: Shipment): ClaimedStatusKey {
-  if (shipment.status === "CANCELLED" || shipment.status === "INCIDENT") return "cancelled";
+  if (shipment.status === "CANCELLED") return "cancelled";
   if (shipment.status === "DELIVERY_CONFIRMED" || shipment.status === "COMPLETED") return "done";
-  if (shipment.status === "PICKUP_CONFIRMED" || shipment.status === "IN_TRANSIT") return "running";
-  if (shipment.status === "MATCHED") return isCarrierAssigned(shipment) ? "running" : "assign";
+  if (shipment.status === "PICKUP_CONFIRMED" || shipment.status === "IN_TRANSIT" || shipment.status === "INCIDENT") {
+    return "running";
+  }
+  if (shipment.status === "MATCHED") {
+    return isCarrierAssigned(shipment) ? "pickup" : "assign";
+  }
   return "assign";
 }
 
@@ -21,7 +26,8 @@ const filters: readonly {
   label: string;
   icon: keyof typeof MaterialCommunityIcons.glyphMap;
 }[] = [
-  { id: "assign", label: "Chờ phân công", icon: "clipboard-account-outline" },
+  { id: "assign", label: "Phân công", icon: "clipboard-account-outline" },
+  { id: "pickup", label: "Chờ lấy hàng", icon: "package-variant-closed" },
   { id: "running", label: "Đang chạy", icon: "truck-delivery-outline" },
   { id: "done", label: "Đã giao", icon: "star-outline" },
   { id: "cancelled", label: "Đã hủy", icon: "backup-restore" },
@@ -37,7 +43,7 @@ export function ClaimedStatusFilters({
   onChange: (id: ClaimedViewFilter) => void;
 }) {
   const { colors } = useTheme();
-  const total = counts.assign + counts.running + counts.done + counts.cancelled;
+  const total = counts.assign + counts.pickup + counts.running + counts.done + counts.cancelled;
 
   return (
     <View style={styles.wrap}>
@@ -132,7 +138,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   badgeText: { color: "#FFFFFF", fontFamily: "Inter_700Bold", fontSize: 8, lineHeight: 10 },
-  label: { fontSize: 10, lineHeight: 13, textAlign: "center" },
+  label: { fontSize: 9, lineHeight: 12, textAlign: "center" },
   viewAll: {
     flexDirection: "row",
     alignItems: "center",
