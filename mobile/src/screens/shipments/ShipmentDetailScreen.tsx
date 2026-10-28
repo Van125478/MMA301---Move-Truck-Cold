@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import { Image, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { useFocusEffect, useNavigation, useRoute } from "@react-navigation/native";
@@ -6,7 +6,6 @@ import type { RouteProp } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { ConfirmDialog, ErrorState, LoadingBlock, StatusPill } from "../../components/common/Feedback";
-import { AssignmentSuccessSheet } from "../../components/shipments/AssignmentSuccessSheet";
 import { CarrierAssignmentSection } from "../../components/shipments/CarrierAssignmentSection";
 import { PhoneFrame } from "../../components/common/PhoneFrame";
 import { FieldError } from "../../components/common/FieldError";
@@ -14,6 +13,7 @@ import { PrimaryButton } from "../../components/common/PrimaryButton";
 import { pointer } from "../../constants/hit";
 import { radius, space, useTheme } from "../../constants/theme";
 import { useAuth } from "../../features/auth/AuthProvider";
+import { useFlashNotice } from "../../features/flash/FlashNoticeProvider";
 import { useFavorites } from "../../features/favorites/FavoritesProvider";
 import type { RootStackParamList } from "../../navigation/types";
 import { ApiError } from "../../services/api/client";
@@ -82,8 +82,16 @@ function ShipmentDetailBody({
   const [vehicleId, setVehicleId] = useState<string | null>(null);
   const [driverId, setDriverId] = useState<string | null>(null);
   const [fleetNote, setFleetNote] = useState<string | null>(null);
-  const [assignmentSuccess, setAssignmentSuccess] = useState<Shipment | null>(null);
+  const flash = useFlashNotice();
   const role = session.status === "authenticated" ? session.user.role : null;
+
+  useEffect(() => {
+    setVehicleId(null);
+    setDriverId(null);
+    setVehicles([]);
+    setDrivers([]);
+    setFleetNote(null);
+  }, [shipmentId]);
 
   const load = useCallback(async () => {
     if (!role || role === "ADMIN") {
@@ -107,6 +115,8 @@ function ShipmentDetailBody({
       }
       const canAssign = role === "CARRIER" && next.status === "MATCHED" && !next.vehicleId && !next.driverId;
       if (canAssign) {
+        setVehicleId(null);
+        setDriverId(null);
         try {
           const fleet = await loadFleet();
           setVehicles(fleet.vehicles);
@@ -115,6 +125,12 @@ function ShipmentDetailBody({
         } catch (caught) {
           setFleetNote(caught instanceof ApiError ? caught.message : "Không tải được xe và tài xế.");
         }
+      } else {
+        setVehicleId(null);
+        setDriverId(null);
+        setVehicles([]);
+        setDrivers([]);
+        setFleetNote(null);
       }
     } catch (caught) {
       if (caught instanceof ApiError && caught.status === 401) {
@@ -154,8 +170,19 @@ function ShipmentDetailBody({
         setDriverId(null);
         setVehicles([]);
         setDrivers([]);
-        setAssignmentSuccess(next);
+        flash.show({
+          kind: "assign",
+          title: "Phân công thành công",
+          body: carrierAssignmentSummary(next) ?? "Đã gán xe và tài xế cho chuyến.",
+        });
         await load();
+      }
+      if (action === "delivery") {
+        flash.show({
+          kind: "delivery",
+          title: "Giao hàng thành công",
+          body: `${next.pickupLocation} → ${next.deliveryLocation}`,
+        });
       }
       if (role === "DRIVER" && action === "pickup" && next.status === "IN_TRANSIT") startLiveShare(next.id);
       if (role === "DRIVER" && action === "delivery") stopLiveShare();
@@ -298,15 +325,6 @@ function ShipmentDetailBody({
           {canCancel ? <DangerLink label="Hủy đơn đang tìm xe" onPress={() => setConfirm("cancel")} /> : null}
         </ShipmentDetailActions>
       </ScrollView>
-      <AssignmentSuccessSheet
-        visible={assignmentSuccess !== null}
-        shipment={assignmentSuccess}
-        onClose={() => setAssignmentSuccess(null)}
-        onViewDetail={() => {
-          if (assignmentSuccess) setShipment(assignmentSuccess);
-          setAssignmentSuccess(null);
-        }}
-      />
       <ConfirmDialog
         visible={confirm !== null}
         title={confirmCopy[confirm ?? "claim"].title}

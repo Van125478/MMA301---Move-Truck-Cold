@@ -71,11 +71,13 @@ export function SearchField({
   value,
   onChangeText,
   hideLabel = false,
+  placeholder,
 }: {
   label: string;
   value: string;
   onChangeText: (value: string) => void;
   hideLabel?: boolean;
+  placeholder?: string;
 }) {
   const { colors } = useTheme();
   return (
@@ -88,7 +90,7 @@ export function SearchField({
         <TextInput
           value={value}
           onChangeText={onChangeText}
-          placeholder="Mô tả hàng, điểm lấy, điểm giao"
+          placeholder={placeholder ?? "Mô tả hàng, điểm lấy, điểm giao"}
           placeholderTextColor={colors.hint}
           accessibilityLabel={label}
           autoCapitalize="none"

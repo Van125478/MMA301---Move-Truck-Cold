@@ -7,6 +7,7 @@ import { pointer } from "../../constants/hit";
 import { radius, space, useTheme } from "../../constants/theme";
 import { ApiError } from "../../services/api/client";
 import { actOnIncident, createIncident, listIncidents, type IncidentRow } from "../../services/api/operations";
+import { useFlashNotice } from "../../features/flash/FlashNoticeProvider";
 import type { UserRole } from "../../types/auth";
 
 const types = [
@@ -20,6 +21,7 @@ const types = [
 
 export function ShipmentIncidents({ shipmentId, role }: { shipmentId: string; role: UserRole }) {
   const { colors } = useTheme();
+  const flash = useFlashNotice();
   const [rows, setRows] = useState<IncidentRow[]>([]);
   const [open, setOpen] = useState(false);
   const [kind, setKind] = useState<(typeof types)[number][0]>("TEMPERATURE_ISSUE");
@@ -45,9 +47,15 @@ export function ShipmentIncidents({ shipmentId, role }: { shipmentId: string; ro
     setError(null);
     try {
       await createIncident(shipmentId, kind, title.trim(), description.trim());
+      const reportedTitle = title.trim();
       setTitle("");
       setDescription("");
       setOpen(false);
+      flash.show({
+        kind: "incident",
+        title: "Đã gửi báo cáo sự cố",
+        body: reportedTitle || "Hồ sơ sự cố đã được tạo trên chuyến này.",
+      });
       await load();
     } catch (caught) {
       setError(caught instanceof ApiError ? caught.message : "Không tạo được sự cố.");
