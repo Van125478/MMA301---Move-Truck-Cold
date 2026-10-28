@@ -7,4 +7,5 @@ export type RootStackParamList = {
   Home: undefined;
   ShipmentList: undefined;
   ShipmentDetail: { id: string };
+  CreateShipment: undefined;
 };
