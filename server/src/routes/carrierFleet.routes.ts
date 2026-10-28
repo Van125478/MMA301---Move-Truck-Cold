@@ -191,7 +191,10 @@ carrierFleetRouter.get("/drivers", async (request, response, next) => {
   try {
     const carrierId = carrier(request.authUser?.id);
     const drivers = await User.find({ role: "DRIVER", carrierId }).sort({ displayName: 1, _id: 1 }).select("email username displayName accountStatus mustChangePassword");
-    response.status(200).json({ drivers: drivers.map(toDriverRosterDto) });
+    const busy = await unfinishedDriverIds(carrierId, drivers.map((driver) => driver._id.toString()));
+    response.status(200).json({
+      drivers: drivers.map((driver) => toDriverRosterDto(driver, busy.has(driver._id.toString()))),
+    });
   } catch (error) {
     next(error);
   }
@@ -304,6 +307,12 @@ async function unfinishedVehicleIds(carrierId: string, vehicleIds: string[]): Pr
   if (vehicleIds.length === 0) return new Set();
   const rows = await Shipment.find({ carrierId, vehicleId: { $in: vehicleIds }, status: { $in: [...unfinishedShipmentStatuses] } }).select("vehicleId");
   return new Set(rows.map((row) => row.vehicleId?.toString()).filter((id): id is string => Boolean(id)));
+}
+
+async function unfinishedDriverIds(carrierId: string, driverIds: string[]): Promise<Set<string>> {
+  if (driverIds.length === 0) return new Set();
+  const rows = await Shipment.find({ carrierId, driverId: { $in: driverIds }, status: { $in: [...unfinishedShipmentStatuses] } }).select("driverId");
+  return new Set(rows.map((row) => row.driverId?.toString()).filter((id): id is string => Boolean(id)));
 }
 
 function toVehicleDto(

@@ -19,6 +19,8 @@ export type DriverRosterDto = {
   email: string | null;
   accountStatus: "ACTIVE" | "LOCKED";
   mustChangePassword: boolean;
+  availableForAssignment: boolean;
+  assignmentBlockReason: string | null;
 };
 
 type DriverRecord = {
@@ -39,15 +41,21 @@ export function normalizeLoginEmail(value: unknown): string {
   return email;
 }
 
-export function toDriverRosterDto(driver: DriverRecord): DriverRosterDto {
+export function toDriverRosterDto(driver: DriverRecord, assignmentBlocked = false): DriverRosterDto {
   const displayName = driver.displayName?.trim() || null;
+  const accountStatus = driver.accountStatus === "LOCKED" ? "LOCKED" : "ACTIVE";
+  const mustChangePassword = driver.mustChangePassword === true;
+  const ready = accountStatus === "ACTIVE" && !mustChangePassword;
+  const availableForAssignment = ready && !assignmentBlocked;
   return {
     id: driver._id.toString(),
     displayName,
     username: driver.username?.trim() || null,
     email: driver.email?.trim() || null,
-    accountStatus: driver.accountStatus === "LOCKED" ? "LOCKED" : "ACTIVE",
-    mustChangePassword: driver.mustChangePassword === true,
+    accountStatus,
+    mustChangePassword,
+    availableForAssignment,
+    assignmentBlockReason: assignmentBlocked ? "Tài xế đang gắn với chuyến chưa kết thúc." : null,
   };
 }
 
