@@ -1,6 +1,6 @@
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useFocusEffect } from "@react-navigation/native";
-import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { ActivityIndicator, Modal, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { elevatedCard, panelChrome, space, useTheme } from "../../constants/theme";
 import { useAuth } from "../../features/auth/AuthProvider";
@@ -8,7 +8,6 @@ import { ConfirmDialog } from "../../components/common/Feedback";
 import { choosePlan, loadCatalog, loadPlan, releasePlan, type CatalogPlan, type PlanSummary } from "../../services/api/operations";
 import { ApiError } from "../../services/api/client";
 import { FleetScreen } from "../fleet/FleetScreen";
-import { PrimaryButton } from "../../components/common/PrimaryButton";
 import { FieldError } from "../../components/common/FieldError";
 import { formatVnd } from "../../utils/format";
 import { DomesticDieselCard } from "../../components/market/DomesticDieselCard";
@@ -35,9 +34,8 @@ export function AccountScreen() {
   const [plan, setPlan] = useState<PlanSummary | null>(null);
   const [catalog, setCatalog] = useState<CatalogPlan[]>([]);
   const [planError, setPlanError] = useState<string | null>(null);
-  const [buying, setBuying] = useState<string | null>(null);
   const [viewed, setViewed] = useState<CatalogPlan | null>(null);
-  const [confirmPlan, setConfirmPlan] = useState<CatalogPlan | null>(null);
+  const [sheetPhase, setSheetPhase] = useState<"detail" | "pending" | "success">("detail");
   const [releaseAsk, setReleaseAsk] = useState(false);
   const load = useCallback(async () => {
     if (session.status !== "authenticated" || session.user.role === "DRIVER" || session.user.role === "ADMIN") return;
@@ -51,6 +49,34 @@ export function AccountScreen() {
   }, [session]);
 
   useFocusEffect(useCallback(() => { void load(); }, [load]));
+
+  useEffect(() => {
+    if (sheetPhase !== "success") return;
+    const timer = setTimeout(() => {
+      setViewed(null);
+      setSheetPhase("detail");
+    }, 3500);
+    return () => clearTimeout(timer);
+  }, [sheetPhase]);
+
+  function closePlanSheet() {
+    if (sheetPhase === "pending") return;
+    setViewed(null);
+    setSheetPhase("detail");
+  }
+
+  function registerViewedPlan() {
+    if (!viewed || sheetPhase === "pending") return;
+    setSheetPhase("pending");
+    setPlanError(null);
+    void choosePlan(viewed.code)
+      .then(() => load())
+      .then(() => setSheetPhase("success"))
+      .catch((caught) => {
+        setSheetPhase("detail");
+        setPlanError(caught instanceof ApiError ? caught.message : "Môi trường này chưa mở mua gói.");
+      });
+  }
 
   if (session.status !== "authenticated") return null;
   const user = session.user;
@@ -104,7 +130,10 @@ export function AccountScreen() {
                 key={item.code}
                 accessibilityRole="button"
                 accessibilityLabel={`Xem chi tiết gói ${item.name}`}
-                onPress={() => setViewed(item)}
+                onPress={() => {
+                  setSheetPhase("detail");
+                  setViewed(item);
+                }}
                 style={[styles.planCard, elevatedCard(colors), current ? { borderColor: colors.primary, borderWidth: 1.5 } : null]}
               >
                 <View style={styles.planTop}>
@@ -136,10 +165,40 @@ export function AccountScreen() {
       >
         <Text style={[styles.logoutText, { color: colors.ink }]}>{leaving ? "Đang đăng xuất…" : "Đăng xuất"}</Text>
       </Pressable>
-      <Modal visible={viewed !== null} transparent animationType="fade" onRequestClose={() => setViewed(null)}>
+      <Modal visible={viewed !== null} transparent animationType="fade" onRequestClose={closePlanSheet}>
         <View style={styles.backdrop}>
           <View style={[styles.sheet, { backgroundColor: colors.surface }]}>
-            {viewed ? (
+            {viewed && sheetPhase === "success" ? (
+              <>
+                <View style={styles.successHero}>
+                  <View style={[styles.successIcon, { backgroundColor: colors.successBg }]}>
+                    <MaterialCommunityIcons name="check-bold" size={52} color={colors.success} />
+                  </View>
+                  <Text accessibilityRole="header" style={[styles.sheetTitle, styles.successHeadline, { color: colors.ink }]}>
+                    Đăng ký thành công!
+                  </Text>
+                  <View style={[styles.successPill, { backgroundColor: colors.successBg }]}>
+                    <View style={[styles.successDot, { backgroundColor: colors.success }]} />
+                    <Text style={[styles.successPillText, { color: colors.success }]}>Gói {viewed.name} · Đang dùng</Text>
+                  </View>
+                </View>
+                <Fact label="Giá niêm yết" value={viewed.listPriceLabel || "0 VND"} />
+                <Fact label="Kỳ hạn" value={cycleLabel(viewed.billingCycle)} />
+                <Fact label="Trần xe đang dùng" value={viewed.vehicleCap == null ? "Không giới hạn" : `${viewed.vehicleCap} xe`} />
+                <Fact label="Phí nền tảng trên cước" value={viewed.rateLabel || "Theo gói"} />
+                <Text style={[styles.sectionNote, { color: colors.muted }]}>
+                  Gói demo đã kích hoạt. Hạn mức áp dụng ngay trên tài khoản này.
+                </Text>
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel="Xong"
+                  onPress={closePlanSheet}
+                  style={[styles.sheetButton, styles.successDone, { borderColor: colors.primary, backgroundColor: colors.primary }]}
+                >
+                  <Text style={[styles.releaseText, { color: colors.onPrimary }]}>Xong</Text>
+                </Pressable>
+              </>
+            ) : viewed ? (
               <>
                 <Text accessibilityRole="header" style={[styles.sheetTitle, { color: colors.ink }]}>{viewed.name}</Text>
                 <Fact label="Giá niêm yết" value={viewed.listPriceLabel || "0 VND"} />
@@ -148,20 +207,31 @@ export function AccountScreen() {
                 <Fact label="Phí nền tảng trên cước" value={viewed.rateLabel || "Theo gói"} />
                 <Text style={[styles.sectionNote, { color: colors.muted }]}>Xem chi tiết không đăng ký gói. Bấm Đóng để thoát.</Text>
                 <View style={styles.sheetRow}>
-                  <Pressable accessibilityRole="button" accessibilityLabel="Đóng" onPress={() => setViewed(null)} style={[styles.sheetButton, { borderColor: colors.line }]}>
+                  <Pressable
+                    accessibilityRole="button"
+                    accessibilityLabel="Đóng"
+                    disabled={sheetPhase === "pending"}
+                    onPress={closePlanSheet}
+                    style={[styles.sheetButton, { borderColor: colors.line, opacity: sheetPhase === "pending" ? 0.5 : 1 }]}
+                  >
                     <Text style={[styles.releaseText, { color: colors.ink }]}>Đóng</Text>
                   </Pressable>
                   {plan?.code === viewed.code ? null : (
                     <Pressable
                       accessibilityRole="button"
                       accessibilityLabel="Đăng ký gói"
-                      onPress={() => {
-                        setConfirmPlan(viewed);
-                        setViewed(null);
-                      }}
-                      style={[styles.sheetButton, { borderColor: colors.primary, backgroundColor: colors.primary }]}
+                      disabled={sheetPhase === "pending"}
+                      onPress={registerViewedPlan}
+                      style={[
+                        styles.sheetButton,
+                        { borderColor: colors.primary, backgroundColor: colors.primary, opacity: sheetPhase === "pending" ? 0.85 : 1 },
+                      ]}
                     >
-                      <Text style={[styles.releaseText, { color: colors.onPrimary }]}>Đăng ký gói</Text>
+                      {sheetPhase === "pending" ? (
+                        <ActivityIndicator color={colors.onPrimary} />
+                      ) : (
+                        <Text style={[styles.releaseText, { color: colors.onPrimary }]}>Đăng ký gói</Text>
+                      )}
                     </Pressable>
                   )}
                 </View>
@@ -170,28 +240,6 @@ export function AccountScreen() {
           </View>
         </View>
       </Modal>
-      <ConfirmDialog
-        visible={confirmPlan !== null}
-        title={confirmPlan ? `Đăng ký ${confirmPlan.name}?` : "Đăng ký gói?"}
-        body="Bấm Đóng nếu chưa muốn đăng ký. Gói chỉ kích hoạt sau khi xác nhận."
-        confirmLabel={buying ? "Đang đăng ký…" : "Xác nhận"}
-        pending={buying !== null}
-        onCancel={() => {
-          if (!buying) setConfirmPlan(null);
-        }}
-        onConfirm={() => {
-          if (!confirmPlan) return;
-          setBuying(confirmPlan.code);
-          setPlanError(null);
-          void choosePlan(confirmPlan.code)
-            .then(() => {
-              setConfirmPlan(null);
-              return load();
-            })
-            .catch((caught) => setPlanError(caught instanceof ApiError ? caught.message : "Môi trường này chưa mở mua gói."))
-            .finally(() => setBuying(null));
-        }}
-      />
       <ConfirmDialog
         visible={releaseAsk}
         title="Hủy gói demo?"
@@ -248,10 +296,24 @@ const styles = StyleSheet.create({
   release: { minHeight: 44, borderWidth: 1, borderRadius: 12, alignItems: "center", justifyContent: "center" },
   releaseText: { fontFamily: "Inter_600SemiBold", fontSize: 15, lineHeight: 22 },
   backdrop: { flex: 1, backgroundColor: "rgba(15, 23, 42, 0.48)", justifyContent: "flex-end", padding: space.lg },
-  sheet: { borderRadius: 20, padding: space.xl, gap: space.md },
+  sheet: { borderRadius: 20, padding: space.xl, gap: space.md, minHeight: 420 },
   sheetTitle: { fontFamily: "Inter_700Bold", fontSize: 22, lineHeight: 30 },
   sheetRow: { flexDirection: "row", gap: space.sm },
   sheetButton: { flex: 1, minHeight: 48, borderWidth: 1, borderRadius: 12, alignItems: "center", justifyContent: "center" },
+  successHero: { alignItems: "center", gap: space.md, paddingBottom: space.sm },
+  successHeadline: { textAlign: "center", fontSize: 24, lineHeight: 32 },
+  successIcon: { width: 96, height: 96, borderRadius: 48, alignItems: "center", justifyContent: "center" },
+  successPill: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: space.sm,
+    borderRadius: 999,
+    paddingHorizontal: space.lg,
+    paddingVertical: space.sm,
+  },
+  successDot: { width: 8, height: 8, borderRadius: 4 },
+  successPillText: { fontFamily: "Inter_600SemiBold", fontSize: 15, lineHeight: 22 },
+  successDone: { flex: undefined, width: "100%", minHeight: 52, marginTop: space.xs },
   fact: { gap: 2 },
   factLabel: { fontFamily: "Inter_500Medium", fontSize: 13, lineHeight: 18 },
   factValue: { fontFamily: "Inter_600SemiBold", fontSize: 16, lineHeight: 22 },
