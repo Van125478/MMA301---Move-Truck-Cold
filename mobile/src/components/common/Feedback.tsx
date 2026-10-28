@@ -43,14 +43,24 @@ export function EmptyState({ title, body }: { title: string; body: string }) {
   );
 }
 
-export function ErrorState({ message, onRetry }: { message: string; onRetry: () => void }) {
+export function ErrorState({
+  title = "Chưa tải được",
+  message,
+  actionLabel = "Thử lại",
+  onRetry,
+}: {
+  title?: string;
+  message: string;
+  actionLabel?: string;
+  onRetry: () => void;
+}) {
   const { colors } = useTheme();
   return (
     <View accessibilityRole="alert" style={styles.center}>
-      <Text style={[styles.emptyTitle, { color: colors.ink }]}>Chưa tải được</Text>
+      <Text accessibilityRole="header" style={[styles.emptyTitle, { color: colors.ink }]}>{title}</Text>
       <Text style={[styles.centerText, { color: colors.danger }]}>{message}</Text>
-      <Pressable accessibilityRole="button" accessibilityLabel="Thử lại" onPress={onRetry} style={[styles.retry, pointer, { backgroundColor: colors.primary }]}>
-        <Text style={[styles.retryText, { color: colors.onPrimary }]}>Thử lại</Text>
+      <Pressable accessibilityRole="button" accessibilityLabel={actionLabel} onPress={onRetry} style={[styles.retry, pointer, { backgroundColor: colors.primary }]}>
+        <Text style={[styles.retryText, { color: colors.onPrimary }]}>{actionLabel}</Text>
       </Pressable>
     </View>
   );

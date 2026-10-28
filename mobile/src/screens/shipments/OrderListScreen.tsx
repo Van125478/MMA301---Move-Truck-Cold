@@ -56,7 +56,7 @@ export function OrderListScreen({
   const favorites = useFavorites();
   const [items, setItems] = useState<Shipment[] | null>(null);
   const [marketplace, setMarketplace] = useState<Shipment[]>([]);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<ListError | null>(null);
   const [refreshing, setRefreshing] = useState(false);
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState("all");
@@ -74,16 +74,12 @@ export function OrderListScreen({
         setMarketplace(board);
         setError(null);
       } catch (caught) {
-        if (caught instanceof ApiError && caught.status === 401) {
-          await logout();
-          return;
-        }
-        setError(caught instanceof ApiError ? caught.message : "Không tải được danh sách.");
+        setError(classifyListError(caught));
       } finally {
         setRefreshing(false);
       }
     },
-    [includeMarketplace, logout, mode],
+    [includeMarketplace, mode],
   );
 
   useFocusEffect(
@@ -103,7 +99,21 @@ export function OrderListScreen({
     return prepareCatalog(byStatus, query, group);
   }, [filter, group, items, mode, query]);
 
-  if (items === null && error) return <ErrorState message={error} onRetry={() => void load(false)} />;
+  const filtering = query.trim().length > 0 || (mode === "mine" && filter !== "all") || group !== "ALL";
+
+  if (items === null && error) {
+    return (
+      <ErrorState
+        title={listErrorTitle[error.kind]}
+        message={error.message}
+        actionLabel={error.kind === "session" ? "Đăng nhập lại" : "Thử lại"}
+        onRetry={() => {
+          if (error.kind === "session") void logout();
+          else void load(false);
+        }}
+      />
+    );
+  }
   if (items === null) return <LoadingBlock label="Đang tải danh sách" />;
 
   const marketing = Boolean(kicker);
@@ -133,7 +143,7 @@ export function OrderListScreen({
           </Text>
           {error ? (
             <Text accessibilityRole="alert" style={[styles.error, { color: colors.danger }]}>
-              {error}
+              {error.message}
             </Text>
           ) : null}
           <SearchField hideLabel={marketing} label={searchLabel} value={query} onChangeText={setQuery} />
@@ -185,10 +195,22 @@ export function OrderListScreen({
       )}
       ItemSeparatorComponent={() => <View style={marketing || includeMarketplace ? styles.gapWide : styles.gap} />}
       ListEmptyComponent={
-        <EmptyState
-          title={query.trim() || filter !== "all" || group !== "ALL" ? "Không có đơn khớp" : emptyTitle}
-          body={query.trim() || filter !== "all" || group !== "ALL" ? "Thử từ khóa khác hoặc bỏ bộ lọc." : emptyBody}
-        />
+        filtering ? (
+          <View style={styles.emptyFilter}>
+            <EmptyState title="Không có đơn khớp" body="Thử từ khóa khác hoặc bỏ bộ lọc." />
+            <PrimaryButton
+              spaced={false}
+              label="Xóa bộ lọc"
+              onPress={() => {
+                setQuery("");
+                setFilter("all");
+                setGroup("ALL");
+              }}
+            />
+          </View>
+        ) : (
+          <EmptyState title={emptyTitle} body={emptyBody} />
+        )
       }
     />
   );
@@ -208,4 +230,24 @@ const styles = StyleSheet.create({
   gapWide: { height: space.lg },
   inlineCard: { marginBottom: space.lg },
   fill: { flex: 1 },
+  emptyFilter: { gap: space.md },
 });
+
+type ListErrorKind = "network" | "session" | "forbidden" | "other";
+
+type ListError = { message: string; kind: ListErrorKind };
+
+const listErrorTitle: Record<ListErrorKind, string> = {
+  network: "Mất kết nối",
+  session: "Hết phiên đăng nhập",
+  forbidden: "Không có quyền truy cập",
+  other: "Chưa tải được",
+};
+
+function classifyListError(caught: unknown): ListError {
+  if (!(caught instanceof ApiError)) return { message: "Không tải được danh sách.", kind: "other" };
+  if (caught.status === 401 || caught.code === "unauthenticated") return { message: caught.message, kind: "session" };
+  if (caught.status === 403) return { message: caught.message, kind: "forbidden" };
+  if (caught.status === 0 || caught.code === "network_error") return { message: caught.message, kind: "network" };
+  return { message: caught.message, kind: "other" };
+}

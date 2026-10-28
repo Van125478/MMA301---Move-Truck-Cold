@@ -15,15 +15,32 @@ export function vehicleKindLabel(group: TemperatureGroup): string {
   return "Xe lạnh";
 }
 
+/** Bỏ dấu, kể cả đ, để tìm không phân biệt dấu. */
+export function foldSearch(text: string): string {
+  return text.normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/đ/g, "d").replace(/Đ/g, "D").toLowerCase();
+}
+
 export function prepareCatalog(items: readonly Shipment[], query: string, group: TemperatureFilter): Shipment[] {
-  const needle = query.trim().toLowerCase();
+  const needle = foldSearch(query.trim());
   const matched = items.filter((item) => {
     if (group !== "ALL" && item.temperatureGroup !== group) return false;
     if (!needle) return true;
-    return [item.cargoDescription, item.pickupLocation, item.deliveryLocation, item.temperatureLabel, item.vehicleRequirement, item.id]
-      .join(" ")
-      .toLowerCase()
-      .includes(needle);
+    const haystack = foldSearch(
+      [
+        item.cargoDescription,
+        item.pickupLocation,
+        item.deliveryLocation,
+        item.pickupCompany,
+        item.deliveryCompany,
+        item.temperatureLabel,
+        item.vehicleRequirement,
+        item.statusLabel,
+        item.id,
+      ]
+        .filter((part): part is string => Boolean(part))
+        .join(" "),
+    );
+    return haystack.includes(needle);
   });
   return [...matched].sort((left, right) => right.listedPriceVnd - left.listedPriceVnd || left.id.localeCompare(right.id));
 }
