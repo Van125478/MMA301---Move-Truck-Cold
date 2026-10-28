@@ -31,7 +31,13 @@
     },
     "plugins": [
       "expo-secure-store",
-      "expo-font"
+      "expo-font",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Coldi cần quyền truy cập ảnh để bạn đính kèm ảnh hàng hóa khi đăng đơn."
+        }
+      ]
     ]
   }
 }
