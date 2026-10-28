@@ -16,6 +16,16 @@ function badgeLabel(count: number): string | null {
   return count > 9 ? "9+" : String(count);
 }
 
+/** Icon đặc khi tab đang chọn — dễ thấy xanh navy như các mục khác. */
+function iconWhenSelected(icon: TabItem["icon"], selected: boolean): TabItem["icon"] {
+  if (!selected) return icon;
+  if (icon.endsWith("-outline")) {
+    const filled = icon.slice(0, -"-outline".length) as TabItem["icon"];
+    if (filled in MaterialCommunityIcons.glyphMap) return filled;
+  }
+  return icon;
+}
+
 export function TabBar({ items, active, onChange }: { items: readonly TabItem[]; active: string; onChange: (id: string) => void }) {
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
@@ -41,6 +51,7 @@ export function TabBar({ items, active, onChange }: { items: readonly TabItem[];
       {items.map((item) => {
         const selected = item.id === active;
         const color = selected ? colors.primary : colors.muted;
+        const iconName = iconWhenSelected(item.icon, selected);
         const badge = badgeLabel(item.badgeCount ?? 0);
         const a11y = badge ? `${item.label}, ${item.badgeCount} mục đã lưu` : item.label;
         return (
@@ -51,21 +62,32 @@ export function TabBar({ items, active, onChange }: { items: readonly TabItem[];
             accessibilityLabel={a11y}
             android_ripple={{ color: colors.line, borderless: false }}
             onPress={() => onChange(item.id)}
-            style={({ pressed }) => [styles.tab, pointer, pressed ? styles.pressed : null]}
+            style={({ pressed }) => [styles.tab, pointer, pressed && !selected ? styles.pressed : null]}
           >
-            <View style={styles.iconWrap}>
-              <MaterialCommunityIcons name={item.icon} size={24} color={color} />
-              {badge ? (
-                <View style={[styles.badge, { backgroundColor: colors.danger }]}>
-                  <Text maxFontSizeMultiplier={1.1} style={styles.badgeText}>
-                    {badge}
-                  </Text>
-                </View>
-              ) : null}
+            <View
+              style={[
+                styles.tabInner,
+                selected ? { backgroundColor: colors.badge, borderColor: colors.line } : null,
+              ]}
+            >
+              <View style={styles.iconWrap}>
+                <MaterialCommunityIcons name={iconName} size={24} color={color} />
+                {badge ? (
+                  <View style={[styles.badge, { backgroundColor: colors.danger }]}>
+                    <Text maxFontSizeMultiplier={1.1} style={styles.badgeText}>
+                      {badge}
+                    </Text>
+                  </View>
+                ) : null}
+              </View>
+              <Text
+                maxFontSizeMultiplier={1.2}
+                numberOfLines={1}
+                style={[styles.label, { color, fontFamily: selected ? "Inter_700Bold" : "Inter_600SemiBold" }]}
+              >
+                {item.label}
+              </Text>
             </View>
-            <Text maxFontSizeMultiplier={1.2} numberOfLines={1} style={[styles.label, { color, fontFamily: selected ? "Inter_700Bold" : "Inter_600SemiBold" }]}>
-              {item.label}
-            </Text>
           </Pressable>
         );
       })}
@@ -74,8 +96,21 @@ export function TabBar({ items, active, onChange }: { items: readonly TabItem[];
 }
 
 const styles = StyleSheet.create({
-  bar: { flexShrink: 0, flexDirection: "row", borderTopWidth: 1, paddingTop: space.xs, zIndex: 20 },
-  tab: { flex: 1, minHeight: 56, alignItems: "center", justifyContent: "center", gap: 3, paddingTop: space.sm },
+  bar: { flexShrink: 0, flexDirection: "row", borderTopWidth: 1, paddingTop: space.xs, paddingHorizontal: space.xs, zIndex: 20 },
+  tab: { flex: 1, minHeight: 56, alignItems: "center", justifyContent: "center", paddingVertical: space.xs },
+  tabInner: {
+    width: "100%",
+    maxWidth: 88,
+    minHeight: 52,
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 3,
+    paddingHorizontal: space.sm,
+    paddingVertical: space.sm,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: "transparent",
+  },
   iconWrap: { width: 28, height: 28, alignItems: "center", justifyContent: "center" },
   badge: {
     position: "absolute",

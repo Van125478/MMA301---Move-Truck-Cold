@@ -17,6 +17,7 @@ import { CreateOrderScreen } from "../shipments/CreateOrderScreen";
 import { ClaimedTripsScreen } from "../shipments/ClaimedTripsScreen";
 import { OrderListScreen } from "../shipments/OrderListScreen";
 import { ShipmentDetailPanel } from "../shipments/ShipmentDetailScreen";
+import { CarrierBoardScreen } from "../carrier/CarrierBoardScreen";
 
 const shipperTabs: TabItem[] = [
   { id: "orders", label: "Đơn hàng", icon: "clipboard-text-outline" },
@@ -118,11 +119,13 @@ export function WorkspaceScreen() {
               <Pane visible={!detailId && tab === "orders"}>
                 <OrderListScreen
                   mode="mine"
-                  kicker="Giải pháp · Chủ hàng"
-                  title="Chủ động gửi hàng lạnh, theo dõi hành trình rõ ràng."
-                  lede="Đơn bạn niêm yết hiển thị dưới đây. Tạo đơn mới hoặc mở chi tiết để theo dõi chuyến."
-                  searchLabel="Tìm hàng, điểm lấy, điểm giao"
+                  boardPromo
+                  promoArtIcon="package-variant-closed"
+                  title="Đơn hàng"
+                  lede="Chủ động gửi hàng lạnh, theo dõi hành trình rõ ràng."
+                  searchPlaceholder="Mô tả hàng, điểm lấy, điểm giao"
                   includeMarketplace
+                  onOpenFavorites={() => changeTab("saved")}
                   primaryAction={{ label: "Tạo đơn mới", onPress: () => changeTab("create") }}
                   emptyTitle="Chưa có đơn"
                   emptyBody="Bấm Tạo đơn mới để niêm yết nhu cầu vận chuyển lạnh."
@@ -142,14 +145,7 @@ export function WorkspaceScreen() {
             ) : null}
             {role === "CARRIER" ? (
               <Pane visible={!detailId && tab === "board"}>
-                <OrderListScreen
-                  mode="board"
-                  title="Sàn chuyến"
-                  lede="Đơn đang tìm xe. Nhà xe tự nhận, không có máy ghép."
-                  emptyTitle="Chưa có chuyến đang mở"
-                  emptyBody="Khi chủ hàng đăng đơn, chuyến hiện ở đây."
-                  onOpenDetail={openDetailProp}
-                />
+                <CarrierBoardScreen onOpenDetail={openDetailProp} onOpenFavorites={() => changeTab("saved")} />
               </Pane>
             ) : null}
             {role === "CARRIER" ? (
@@ -161,8 +157,11 @@ export function WorkspaceScreen() {
               <Pane visible={!detailId && tab === "trips"}>
                 <OrderListScreen
                   mode="driver"
+                  boardPromo
+                  promoArtIcon="steering"
                   title="Chuyến được giao"
                   lede="Chỉ hiện chuyến nhà xe đã phân công cho tài xế này."
+                  searchPlaceholder="Mô tả hàng, điểm lấy, điểm giao"
                   emptyTitle="Chưa có chuyến"
                   emptyBody="Khi nhà xe phân công xe và tài xế, chuyến hiện ở đây."
                   onOpenDetail={openDetailProp}
@@ -173,9 +172,10 @@ export function WorkspaceScreen() {
               <Pane visible={!detailId && tab === "saved"}>
                 <FavoritesScreen
                   onOpenDetail={openDetailProp}
-                  kicker={role === "SHIPPER" ? "Giải pháp · Chủ hàng" : undefined}
                   title={role === "SHIPPER" ? "Đơn đã lưu" : "Yêu thích"}
                   lede={role === "SHIPPER" ? "Mở lại nhanh các đơn bạn đánh dấu trái tim." : "Đơn và chuyến bạn đã lưu trên máy này."}
+                  boardPromo
+                  promoArtIcon="heart"
                 />
               </Pane>
             ) : null}

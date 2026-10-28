@@ -1,9 +1,11 @@
-import { useCallback, useMemo, useState } from "react";
+import { MaterialCommunityIcons } from "@expo/vector-icons";
+import { useCallback, useMemo, useState, type ComponentProps, type ReactNode } from "react";
 import { FlatList, Platform, RefreshControl, ScrollView, StyleSheet, Text, View } from "react-native";
 import { useFocusEffect, useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { ChoiceChip, EmptyState, ErrorState, LoadingBlock, SearchField } from "../../components/common/Feedback";
 import { PrimaryButton } from "../../components/common/PrimaryButton";
+import { BoardListPromoHero } from "../../components/layout/BoardListPromoHero";
 import { MarketingSectionHead } from "../../components/layout/MarketingSectionHead";
 import { ShipmentCard } from "../../components/shipment/ShipmentCard";
 import { space, type, useTheme } from "../../constants/theme";
@@ -32,9 +34,14 @@ export function OrderListScreen({
   onOpenDetail,
   kicker,
   searchLabel = "Tìm trong danh sách",
+  searchPlaceholder,
   sectionTitle,
   primaryAction,
   includeMarketplace = false,
+  boardPromo = false,
+  promoArtIcon,
+  onOpenFavorites,
+  headerAddon,
 }: {
   mode: ListMode;
   title: string;
@@ -45,10 +52,15 @@ export function OrderListScreen({
   /** Cùng layout typography với Landing (Chủ hàng). */
   kicker?: string;
   searchLabel?: string;
+  searchPlaceholder?: string;
   sectionTitle?: string;
   primaryAction?: { label: string; onPress: () => void };
   /** Block sàn (cùng API Landing) phía trên danh sách của chủ hàng. */
   includeMarketplace?: boolean;
+  boardPromo?: boolean;
+  promoArtIcon?: ComponentProps<typeof MaterialCommunityIcons>["name"];
+  onOpenFavorites?: () => void;
+  headerAddon?: ReactNode;
 }) {
   const { colors } = useTheme();
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
@@ -116,7 +128,7 @@ export function OrderListScreen({
   }
   if (items === null) return <LoadingBlock label="Đang tải danh sách" />;
 
-  const marketing = Boolean(kicker);
+  const marketing = Boolean(kicker) || boardPromo;
 
   return (
     <FlatList
@@ -130,23 +142,38 @@ export function OrderListScreen({
       removeClippedSubviews={Platform.OS === "android"}
       ListHeaderComponent={
         <View style={styles.header}>
-          {kicker ? (
-            <Text maxFontSizeMultiplier={1.3} style={[styles.kicker, { color: colors.primary }]}>
-              {kicker}
-            </Text>
-          ) : null}
-          <Text accessibilityRole="header" maxFontSizeMultiplier={marketing ? 1.35 : 1.4} style={[marketing ? styles.displayTitle : styles.title, { color: colors.ink }]}>
-            {title}
-          </Text>
-          <Text maxFontSizeMultiplier={1.5} style={[styles.lede, { color: colors.muted }]}>
-            {lede}
-          </Text>
+          {boardPromo ? (
+            <BoardListPromoHero
+              title={title}
+              subline={lede}
+              query={query}
+              onChangeQuery={setQuery}
+              searchPlaceholder={searchPlaceholder ?? "Mô tả hàng, điểm lấy, điểm giao"}
+              onFavoritesPress={onOpenFavorites}
+              artIcon={promoArtIcon}
+            />
+          ) : (
+            <>
+              {kicker ? (
+                <Text maxFontSizeMultiplier={1.3} style={[styles.kicker, { color: colors.primary }]}>
+                  {kicker}
+                </Text>
+              ) : null}
+              <Text accessibilityRole="header" maxFontSizeMultiplier={marketing ? 1.35 : 1.4} style={[marketing ? styles.displayTitle : styles.title, { color: colors.ink }]}>
+                {title}
+              </Text>
+              <Text maxFontSizeMultiplier={1.5} style={[styles.lede, { color: colors.muted }]}>
+                {lede}
+              </Text>
+            </>
+          )}
+          {headerAddon}
           {error ? (
             <Text accessibilityRole="alert" style={[styles.error, { color: colors.danger }]}>
               {error.message}
             </Text>
           ) : null}
-          <SearchField hideLabel={marketing} label={searchLabel} value={query} onChangeText={setQuery} />
+          {!boardPromo ? <SearchField hideLabel={marketing} label={searchLabel} value={query} onChangeText={setQuery} /> : null}
           <Text style={[styles.sortNote, { color: colors.muted }]}>Giá cao đến thấp</Text>
           <ScrollView horizontal nestedScrollEnabled showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chips}>
             {temperatureFilters.map((item) => (

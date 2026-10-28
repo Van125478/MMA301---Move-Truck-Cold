@@ -2,7 +2,8 @@ import { useCallback, useMemo, useState } from "react";
 import { FlatList, Platform, RefreshControl, ScrollView, StyleSheet, Text, View } from "react-native";
 import { useFocusEffect, useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
-import { ChoiceChip, EmptyState, ErrorState, LoadingBlock, SearchField } from "../../components/common/Feedback";
+import { ChoiceChip, EmptyState, ErrorState, LoadingBlock } from "../../components/common/Feedback";
+import { BoardListPromoHero } from "../../components/layout/BoardListPromoHero";
 import { ShipmentCard } from "../../components/shipment/ShipmentCard";
 import {
   ClaimedStatusFilters,
@@ -10,7 +11,7 @@ import {
   type ClaimedStatusKey,
   type ClaimedViewFilter,
 } from "../../components/shipments/ClaimedStatusFilters";
-import { space, type, useTheme } from "../../constants/theme";
+import { space, useTheme } from "../../constants/theme";
 import { useAuth } from "../../features/auth/AuthProvider";
 import { useFavorites } from "../../features/favorites/FavoritesProvider";
 import type { RootStackParamList } from "../../navigation/types";
@@ -59,7 +60,7 @@ export function ClaimedTripsScreen({ onOpenDetail }: { onOpenDetail?: (id: strin
   );
 
   const counts = useMemo(() => {
-    const base: Record<ClaimedStatusKey, number> = { assign: 0, running: 0, done: 0, cancelled: 0 };
+    const base: Record<ClaimedStatusKey, number> = { assign: 0, pickup: 0, running: 0, done: 0, cancelled: 0 };
     for (const row of items ?? []) {
       base[claimedBucket(row)] += 1;
     }
@@ -102,19 +103,20 @@ export function ClaimedTripsScreen({ onOpenDetail }: { onOpenDetail?: (id: strin
       removeClippedSubviews={Platform.OS === "android"}
       ListHeaderComponent={
         <View style={styles.header}>
-          <Text accessibilityRole="header" maxFontSizeMultiplier={1.35} style={[styles.title, { color: colors.ink }]}>
-            Chuyến đã nhận ({items.length})
-          </Text>
-          <Text maxFontSizeMultiplier={1.45} style={[styles.lede, { color: colors.muted }]}>
-            Bấm icon trạng thái hoặc nhóm nhiệt để lọc. Bấm lại để bỏ lọc. Mở thẻ để phân công.
-          </Text>
+          <BoardListPromoHero
+            title="Đã nhận"
+            subline="Lọc theo trạng thái và nhiệt độ. Sau phân công → Chờ lấy hàng; tài xế xác nhận lấy → Đang chạy."
+            query={query}
+            onChangeQuery={setQuery}
+            searchPlaceholder="Mô tả hàng, điểm lấy, điểm giao"
+            artIcon="clipboard-check-outline"
+          />
           {error ? (
             <Text accessibilityRole="alert" style={[styles.error, { color: colors.danger }]}>
               {error}
             </Text>
           ) : null}
           <ClaimedStatusFilters active={bucket} counts={counts} onChange={setBucket} />
-          <SearchField hideLabel label="Tìm trong chuyến đã nhận" value={query} onChangeText={setQuery} />
           <Text style={[styles.sortNote, { color: colors.muted }]}>Giá cao đến thấp</Text>
           <ScrollView horizontal nestedScrollEnabled showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chips}>
             {temperatureChips.map((item) => (
@@ -147,8 +149,6 @@ const styles = StyleSheet.create({
   fill: { flex: 1 },
   list: { padding: space.lg, paddingBottom: 96, flexGrow: 1 },
   header: { gap: space.md, marginBottom: space.lg },
-  title: { ...type.screenTitle },
-  lede: { ...type.body },
   error: { fontFamily: "Inter_500Medium", fontSize: 14, lineHeight: 20 },
   sortNote: { fontFamily: "Inter_600SemiBold", fontSize: 13, lineHeight: 18 },
   chips: { gap: space.sm, paddingVertical: space.xs },

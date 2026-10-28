@@ -4,6 +4,7 @@ import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { ConfirmDialog, EmptyState, LoadingBlock } from "../../components/common/Feedback";
 import { SelectCircle } from "../../components/common/SelectCircle";
+import { BoardListPromoHero } from "../../components/layout/BoardListPromoHero";
 import { ShipmentCard } from "../../components/shipment/ShipmentCard";
 import { pointer } from "../../constants/hit";
 import { space, type, useTheme } from "../../constants/theme";
@@ -11,17 +12,22 @@ import { useFavorites } from "../../features/favorites/FavoritesProvider";
 import { favoriteFrom } from "../../features/favorites/store";
 import type { RootStackParamList } from "../../navigation/types";
 import type { Shipment } from "../../types/shipment";
+import { prepareCatalog } from "../../utils/catalog";
 
 export function FavoritesScreen({
   onOpenDetail,
   kicker,
   title = "Yêu thích",
   lede = "Bấm trái tim để xóa một mục. Chỉnh sửa để chọn và xóa nhiều mục.",
+  boardPromo = false,
+  promoArtIcon,
 }: {
   onOpenDetail?: (id: string) => void;
   kicker?: string;
   title?: string;
   lede?: string;
+  boardPromo?: boolean;
+  promoArtIcon?: React.ComponentProps<typeof import("@expo/vector-icons").MaterialCommunityIcons>["name"];
 }) {
   const { colors } = useTheme();
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
@@ -30,6 +36,7 @@ export function FavoritesScreen({
   const [deleting, setDeleting] = useState(false);
   const [editMode, setEditMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(() => new Set());
+  const [query, setQuery] = useState("");
 
   const exitEditMode = useCallback(() => {
     setEditMode(false);
@@ -54,6 +61,11 @@ export function FavoritesScreen({
   );
 
   const itemCount = favorites.items.length;
+  const visibleItems = useMemo(() => {
+    const rows = favorites.items.map((item) => snapshotShipment(item));
+    return boardPromo ? prepareCatalog(rows, query, "ALL") : rows;
+  }, [boardPromo, favorites.items, query]);
+  const visibleCount = visibleItems.length;
   const selectedCount = selectedIds.size;
   const allSelected = itemCount > 0 && selectedCount === itemCount;
 
@@ -72,25 +84,41 @@ export function FavoritesScreen({
   return (
     <View style={styles.fill}>
       <FlatList
-        data={favorites.items}
+        data={visibleItems}
         keyExtractor={(item) => item.id}
         contentContainerStyle={[styles.list, { paddingBottom: listBottomPad }]}
         style={styles.fill}
         ListHeaderComponent={
           <View style={styles.header}>
-            {kicker ? (
+            {boardPromo ? (
+              <BoardListPromoHero
+                title={title}
+                subline={lede}
+                query={query}
+                onChangeQuery={setQuery}
+                searchPlaceholder="Mô tả hàng, điểm lấy, điểm giao"
+                artIcon={promoArtIcon ?? "heart-outline"}
+              />
+            ) : null}
+            {!boardPromo && kicker ? (
               <Text maxFontSizeMultiplier={1.3} style={[styles.kicker, { color: colors.primary }]}>
                 {kicker}
               </Text>
             ) : null}
             <View style={styles.titleRow}>
-              <Text
-                accessibilityRole="header"
-                maxFontSizeMultiplier={kicker ? 1.35 : 1.4}
-                style={[kicker ? styles.displayTitle : styles.title, styles.titleFlex, { color: colors.ink }]}
-              >
-                {title} ({itemCount})
-              </Text>
+              {!boardPromo ? (
+                <Text
+                  accessibilityRole="header"
+                  maxFontSizeMultiplier={kicker ? 1.35 : 1.4}
+                  style={[kicker ? styles.displayTitle : styles.title, styles.titleFlex, { color: colors.ink }]}
+                >
+                  {title} ({itemCount})
+                </Text>
+              ) : (
+                <Text style={[styles.sectionMeta, { color: colors.ink }]}>
+                  {visibleCount} mục{query.trim() ? " khớp" : ""}
+                </Text>
+              )}
               {itemCount > 0 ? (
                 <Pressable
                   accessibilityRole="button"
@@ -102,35 +130,42 @@ export function FavoritesScreen({
                 </Pressable>
               ) : null}
             </View>
-            <Text maxFontSizeMultiplier={1.5} style={[styles.lede, { color: colors.muted }]}>
-              {editMode ? "Chọn mục cần xóa, rồi bấm Xóa ở thanh dưới." : lede}
-            </Text>
+            {!boardPromo ? (
+              <Text maxFontSizeMultiplier={1.5} style={[styles.lede, { color: colors.muted }]}>
+                {editMode ? "Chọn mục cần xóa, rồi bấm Xóa ở thanh dưới." : lede}
+              </Text>
+            ) : editMode ? (
+              <Text maxFontSizeMultiplier={1.5} style={[styles.lede, { color: colors.muted }]}>
+                Chọn mục cần xóa, rồi bấm Xóa ở thanh dưới.
+              </Text>
+            ) : null}
           </View>
         }
         renderItem={({ item }) => {
-          const shipment = snapshotShipment(item);
-          const selected = selectedIds.has(item.id);
+          const shipment = item;
+          const favoriteId = item.id;
+          const selected = selectedIds.has(favoriteId);
           return (
             <View style={styles.itemRow}>
               {editMode ? (
                 <SelectCircle
                   selected={selected}
-                  onPress={() => toggleSelected(item.id)}
-                  label={`Chọn ${item.cargoDescription}`}
+                  onPress={() => toggleSelected(favoriteId)}
+                  label={`Chọn ${shipment.cargoDescription}`}
                 />
               ) : null}
               <View style={styles.cardWrap}>
                 <ShipmentCard
                   shipment={shipment}
                   saved
-                  onOpen={() => (editMode ? toggleSelected(item.id) : openDetail(item.id))}
-                  onToggleFavorite={editMode ? undefined : () => void favorites.remove(item.id)}
+                  onOpen={() => (editMode ? toggleSelected(favoriteId) : openDetail(favoriteId))}
+                  onToggleFavorite={editMode ? undefined : () => void favorites.remove(favoriteId)}
                 />
               </View>
             </View>
           );
         }}
-        ItemSeparatorComponent={() => <View style={kicker ? styles.gapWide : styles.gap} />}
+        ItemSeparatorComponent={() => <View style={boardPromo || kicker ? styles.gapWide : styles.gap} />}
         ListEmptyComponent={<EmptyState title="Chưa có mục yêu thích" body="Bấm trái tim trên đơn hoặc chuyến đang xem được. Mỗi mã chỉ lưu một lần." />}
       />
 
@@ -240,6 +275,7 @@ const styles = StyleSheet.create({
   editLink: { minHeight: 44, justifyContent: "center", paddingHorizontal: space.xs },
   editLinkText: { fontFamily: "Inter_600SemiBold", fontSize: 15, lineHeight: 22 },
   lede: { ...type.body },
+  sectionMeta: { flex: 1, fontFamily: "Inter_600SemiBold", fontSize: 15, lineHeight: 22 },
   itemRow: { flexDirection: "row", alignItems: "flex-start", gap: space.xs },
   cardWrap: { flex: 1, minWidth: 0 },
   gap: { height: space.md },
