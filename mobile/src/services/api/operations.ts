@@ -88,6 +88,8 @@ export async function loadPlan(): Promise<PlanSummary> {
 
 export type IncidentRow = {
   id: string;
+  shipmentId: string;
+  shipmentLabel: string;
   title: string;
   status: string;
   statusLabel: string;
@@ -100,6 +102,43 @@ export async function listIncidents(shipmentId: string): Promise<IncidentRow[]> 
   const body = await authed<{ incidents?: unknown }>(`/api/incidents?shipmentId=${encodeURIComponent(shipmentId)}`);
   if (!Array.isArray(body.incidents)) return [];
   return body.incidents.flatMap(parseIncident);
+}
+
+export async function listIncidentsForCarrier(limit = 50): Promise<IncidentRow[]> {
+  const body = await authed<{ incidents?: unknown }>(`/api/incidents?limit=${limit}`);
+  if (!Array.isArray(body.incidents)) return [];
+  return body.incidents.flatMap(parseIncident);
+}
+
+export type CommissionLedgerEntry = {
+  shipmentId: string;
+  status: string;
+  baseFreightVnd: number | null;
+  feeVnd: number | null;
+  settlementVnd: number | null;
+  recordedAt: string | null;
+  lockedAt: string | null;
+};
+
+export async function loadCommissionMine(): Promise<{ banner: string; entries: CommissionLedgerEntry[] }> {
+  const body = await authed<{ banner?: unknown; entries?: unknown }>("/api/commission/mine");
+  const banner = typeof body.banner === "string" ? body.banner : "";
+  if (!Array.isArray(body.entries)) return { banner, entries: [] };
+  const entries = body.entries.flatMap((item) => {
+    if (typeof item !== "object" || item === null) return [];
+    const row = item as Record<string, unknown>;
+    if (typeof row.shipmentId !== "string") return [];
+    return [{
+      shipmentId: row.shipmentId,
+      status: typeof row.status === "string" ? row.status : "ABSENT",
+      baseFreightVnd: typeof row.baseFreightVnd === "number" ? row.baseFreightVnd : null,
+      feeVnd: typeof row.feeVnd === "number" ? row.feeVnd : null,
+      settlementVnd: typeof row.settlementVnd === "number" ? row.settlementVnd : null,
+      recordedAt: typeof row.recordedAt === "string" ? row.recordedAt : null,
+      lockedAt: typeof row.lockedAt === "string" ? row.lockedAt : null,
+    }];
+  });
+  return { banner, entries };
 }
 
 export function createIncident(shipmentId: string, incidentType: string, title: string, description: string): Promise<void> {
@@ -124,6 +163,8 @@ function parseIncident(value: unknown): IncidentRow[] {
   if (typeof row.id !== "string" || typeof row.title !== "string" || typeof row.version !== "number") return [];
   return [{
     id: row.id,
+    shipmentId: typeof row.shipmentId === "string" ? row.shipmentId : "",
+    shipmentLabel: typeof row.shipmentLabel === "string" ? row.shipmentLabel : "",
     title: row.title,
     status: typeof row.status === "string" ? row.status : "",
     statusLabel: typeof row.statusLabel === "string" ? row.statusLabel : "",
