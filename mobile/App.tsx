@@ -10,6 +10,8 @@ import { SafeAreaProvider } from "react-native-safe-area-context";
 import { AppErrorBoundary } from "./src/components/common/AppErrorBoundary";
 import { AuthProvider } from "./src/features/auth/AuthProvider";
 import { FavoritesProvider } from "./src/features/favorites/FavoritesProvider";
+import { FlashNoticeProvider } from "./src/features/flash/FlashNoticeProvider";
+import { ChatInboxProvider } from "./src/features/chat/ChatInboxProvider";
 import { RootNavigator } from "./src/navigation/RootNavigator";
 
 export default function App() {
@@ -27,7 +29,11 @@ export default function App() {
       <AppErrorBoundary>
         <AuthProvider>
           <FavoritesProvider>
-            <RootNavigator />
+            <FlashNoticeProvider>
+              <ChatInboxProvider>
+                <RootNavigator />
+              </ChatInboxProvider>
+            </FlashNoticeProvider>
           </FavoritesProvider>
         </AuthProvider>
       </AppErrorBoundary>

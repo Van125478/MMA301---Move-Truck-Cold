@@ -11,6 +11,7 @@ import { RegisterScreen } from "../screens/auth/RegisterScreen";
 import { ResetPasswordScreen } from "../screens/auth/ResetPasswordScreen";
 import { LandingScreen } from "../screens/guest/LandingScreen";
 import { NotificationsScreen } from "../screens/notifications/NotificationsScreen";
+import { ChatInboxScreen } from "../screens/chat/ChatInboxScreen";
 import { SessionGate } from "../screens/SessionGate";
 import { ShipmentDetailScreen } from "../screens/shipments/ShipmentDetailScreen";
 import { WorkspaceScreen } from "../screens/workspace/WorkspaceScreen";
@@ -31,7 +32,7 @@ function linkingFor(signedIn: boolean, mustChange: boolean) {
       screens: signedIn
         ? mustChange
           ? { ChangePassword: "doi-mat-khau" }
-          : { Workspace: "trang-chu", ShipmentDetail: "don/:id", Notifications: "thong-bao" }
+          : { Workspace: "trang-chu", ShipmentDetail: "don/:id", Notifications: "thong-bao", ChatInbox: "hop-thu" }
         : {
             Landing: "",
             Login: "dang-nhap",
@@ -94,6 +95,7 @@ export function RootNavigator() {
             <Stack.Screen name="Workspace" component={WorkspaceScreen} />
             <Stack.Screen name="ShipmentDetail" component={ShipmentDetailScreen} />
             <Stack.Screen name="Notifications" component={NotificationsScreen} />
+            <Stack.Screen name="ChatInbox" component={ChatInboxScreen} />
           </>
         )}
       </Stack.Navigator>

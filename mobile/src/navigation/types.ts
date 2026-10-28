@@ -8,4 +8,5 @@ export type RootStackParamList = {
   Workspace: undefined;
   ShipmentDetail: { id: string };
   Notifications: undefined;
+  ChatInbox: undefined;
 };

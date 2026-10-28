@@ -1,6 +1,7 @@
 import { StyleSheet, View } from "react-native";
 import { Wordmark } from "../brand/Wordmark";
 import { NotificationBell } from "../navigation/NotificationBell";
+import { MailboxBell } from "../navigation/MailboxBell";
 import { space, useTheme } from "../../constants/theme";
 
 /** Thanh thương hiệu dùng chung Landing và workspace đã đăng nhập. */
@@ -9,7 +10,10 @@ export function ScreenTopBar() {
   return (
     <View style={[styles.bar, { backgroundColor: colors.surface, borderBottomColor: colors.line }]}>
       <Wordmark />
-      <NotificationBell />
+      <View style={styles.actions}>
+        <MailboxBell />
+        <NotificationBell />
+      </View>
     </View>
   );
 }
@@ -23,4 +27,5 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "space-between",
   },
+  actions: { flexDirection: "row", alignItems: "center", gap: 2 },
 });

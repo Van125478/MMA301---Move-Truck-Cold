@@ -6,10 +6,12 @@ import { pointer } from "../../constants/hit";
 import { radius, space, useTheme } from "../../constants/theme";
 import { ApiError } from "../../services/api/client";
 import { loadChat, openChat, sendChat, type ChatMessage } from "../../services/api/operations";
+import { useChatInboxOptional } from "../../features/chat/ChatInboxProvider";
 import { formatWhen } from "../../utils/format";
 
 export function ShipmentChat({ shipmentId, role }: { shipmentId: string; role: "SHIPPER" | "CARRIER" }) {
   const { colors } = useTheme();
+  const inbox = useChatInboxOptional();
   const [conversationId, setConversationId] = useState<string | null>(null);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [draft, setDraft] = useState("");
@@ -24,6 +26,7 @@ export function ShipmentChat({ shipmentId, role }: { shipmentId: string; role: "
         if (cancel) return;
         setConversationId(id);
         setMessages(await loadChat(role, shipmentId, id));
+        if (role === "CARRIER" && inbox) await inbox.refresh();
       })
       .catch((caught) => {
         if (!cancel) setError(caught instanceof ApiError ? caught.message : "Không mở được chat.");
@@ -31,7 +34,7 @@ export function ShipmentChat({ shipmentId, role }: { shipmentId: string; role: "
     return () => {
       cancel = true;
     };
-  }, [role, shipmentId]);
+  }, [inbox, role, shipmentId]);
 
   async function send() {
     const text = draft.trim();
