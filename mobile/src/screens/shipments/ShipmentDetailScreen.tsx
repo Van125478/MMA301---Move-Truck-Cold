@@ -10,6 +10,7 @@ import { FieldError } from "../../components/common/FieldError";
 import { ShipmentStatusBadge } from "../../components/shipment/ShipmentStatusBadge";
 import { ShipmentTimelineView } from "../../components/shipment/ShipmentTimelineView";
 import { panelChrome, space, type as textType, useTheme } from "../../constants/theme";
+import { useAuth } from "../../features/auth/AuthProvider";
 import { useShipmentDetail } from "../../features/shipments/useShipmentDetail";
 import type { RootStackParamList } from "../../navigation/types";
 import { apiOrigin } from "../../constants/config";
@@ -60,6 +61,7 @@ export function ShipmentDetailScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const route = useRoute<RouteProp<RootStackParamList, "ShipmentDetail">>();
   const { id } = route.params;
+  const { session } = useAuth();
   const { state, reload, cancel, cancelling, cancelError, clearCancelError } = useShipmentDetail(id);
   const [confirmingCancel, setConfirmingCancel] = useState(false);
 
@@ -94,9 +96,16 @@ export function ShipmentDetailScreen() {
   }
 
   const { shipment } = state;
-  const canCancel = shipment.status === "PUBLISHED";
+  const user = session.status === "authenticated" ? session.user : null;
+  const canCancel =
+    user !== null &&
+    user.role === "SHIPPER" &&
+    user.accountStatus === "ACTIVE" &&
+    shipment.shipperId === user.id &&
+    shipment.status === "PUBLISHED";
 
   async function confirmCancel() {
+    if (!canCancel) return;
     const ok = await cancel();
     if (ok) setConfirmingCancel(false);
   }
