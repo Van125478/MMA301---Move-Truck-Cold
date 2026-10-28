@@ -17,6 +17,72 @@ export type ConversationDto = {
   updatedAt: string;
 };
 
+export type InboxItemDto = {
+  conversationId: string;
+  shipmentId: string;
+  shipmentTitle: string;
+  routeLabel: string;
+  unreadCount: number;
+  lastMessageBody: string;
+  lastMessageAt: string | null;
+  lastSenderRole: "SHIPPER" | "CARRIER" | null;
+  lastMessageId: string | null;
+};
+
+export async function unreadCarrierChatCount(carrierId: string): Promise<number> {
+  const conversations = await Conversation.find({ carrierId }).select("_id carrierReadSequence");
+  let total = 0;
+  for (const row of conversations) {
+    total += await Message.countDocuments({
+      conversationId: row._id,
+      senderRole: "SHIPPER",
+      sequence: { $gt: row.carrierReadSequence ?? 0 },
+    });
+  }
+  return total;
+}
+
+export async function listCarrierInbox(carrierId: string): Promise<InboxItemDto[]> {
+  const conversations = await Conversation.find({ carrierId }).sort({ updatedAt: -1, _id: -1 }).limit(50);
+  const items: InboxItemDto[] = [];
+  for (const conversation of conversations) {
+    const shipment = await Shipment.findById(conversation.shipmentId).select("cargoDescription pickupLocation deliveryLocation");
+    const last = await Message.findOne({ conversationId: conversation._id }).sort({ sequence: -1, _id: -1 });
+    const unreadCount = await Message.countDocuments({
+      conversationId: conversation._id,
+      senderRole: "SHIPPER",
+      sequence: { $gt: conversation.carrierReadSequence ?? 0 },
+    });
+    const title = shipment?.cargoDescription?.trim() || "Chuyến hàng";
+    const routeLabel =
+      shipment?.pickupLocation && shipment?.deliveryLocation
+        ? `${shipment.pickupLocation} → ${shipment.deliveryLocation}`
+        : title;
+    items.push({
+      conversationId: conversation._id.toString(),
+      shipmentId: conversation.shipmentId.toString(),
+      shipmentTitle: title,
+      routeLabel,
+      unreadCount,
+      lastMessageBody: last?.body?.trim() || "Chưa có tin nhắn",
+      lastMessageAt: last?.createdAt?.toISOString() ?? null,
+      lastSenderRole: last?.senderRole ?? null,
+      lastMessageId: last?._id.toString() ?? null,
+    });
+  }
+  return items;
+}
+
+async function markCarrierConversationRead(conversationId: string, carrierId: string): Promise<void> {
+  const conversation = await Conversation.findOne({ _id: conversationId, carrierId });
+  if (!conversation) return;
+  const latest = await Message.findOne({ conversationId: conversation._id }).sort({ sequence: -1, _id: -1 }).select("sequence");
+  const nextRead = latest?.sequence ?? conversation.nextSequence;
+  if (nextRead > (conversation.carrierReadSequence ?? 0)) {
+    await Conversation.updateOne({ _id: conversation._id }, { $set: { carrierReadSequence: nextRead } });
+  }
+}
+
 export type MessageDto = {
   id: string;
   conversationId: string;
@@ -95,6 +161,9 @@ export async function readMessages(input: {
   const messages = await Message.find({ conversationId: conversation._id, sequence: { $gt: input.after } })
     .sort({ sequence: 1, _id: 1 })
     .limit(PAGE_LIMIT);
+  if (input.carrierId) {
+    await markCarrierConversationRead(conversation._id.toString(), input.carrierId);
+  }
   return {
     messages: messages.map(toMessageDto),
     writable: chatWritable(shipment, conversation.carrierId.toString()),

@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { isValidObjectId } from "mongoose";
-import { readAfter, appendMessage, openCarrierConversation, readMessages } from "../chat/conversations.js";
+import { readAfter, appendMessage, listCarrierInbox, openCarrierConversation, readMessages, unreadCarrierChatCount } from "../chat/conversations.js";
 import { readEmptyBody, readMessageBody } from "../chat/messageInput.js";
 import { HttpError } from "../middlewares/errorHandler.js";
 import { requireAuth } from "../middlewares/requireAuth.js";
@@ -11,6 +11,26 @@ import { requireRole } from "../middlewares/requireRole.js";
 export const carrierConversationRouter = Router();
 
 carrierConversationRouter.use(requireAuth, requireOperationalSession, requireRole("CARRIER"));
+
+carrierConversationRouter.get("/inbox", async (request, response, next) => {
+  try {
+    const carrierId = request.authUser?.id;
+    if (!carrierId) throw new HttpError(401, "unauthenticated", "Cần đăng nhập để tiếp tục.");
+    response.status(200).json({ items: await listCarrierInbox(carrierId) });
+  } catch (error) {
+    next(error);
+  }
+});
+
+carrierConversationRouter.get("/unread-count", async (request, response, next) => {
+  try {
+    const carrierId = request.authUser?.id;
+    if (!carrierId) throw new HttpError(401, "unauthenticated", "Cần đăng nhập để tiếp tục.");
+    response.status(200).json({ unread: await unreadCarrierChatCount(carrierId) });
+  } catch (error) {
+    next(error);
+  }
+});
 
 carrierConversationRouter.post("/by-shipment/:shipmentId", requireTrustedOrigin, async (request, response, next) => {
   try {

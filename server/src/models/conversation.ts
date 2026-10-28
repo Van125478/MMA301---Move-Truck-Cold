@@ -6,6 +6,8 @@ const conversationSchema = new Schema(
     shipperId: { type: Schema.Types.ObjectId, ref: "User", required: true },
     carrierId: { type: Schema.Types.ObjectId, ref: "User", required: true },
     nextSequence: { type: Number, required: true, default: 0 },
+    carrierReadSequence: { type: Number, required: true, default: 0 },
+    shipperReadSequence: { type: Number, required: true, default: 0 },
   },
   { timestamps: true },
 );
