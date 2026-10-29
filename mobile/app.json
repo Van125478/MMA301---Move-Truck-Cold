@@ -37,6 +37,12 @@
         {
           "locationWhenInUsePermission": "Coldi dùng vị trí để tài xế gửi GPS của chuyến đang chạy."
         }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Coldi cần quyền truy cập ảnh để bạn đính kèm ảnh hàng hóa khi đăng đơn."
+        }
       ]
     ]
   }

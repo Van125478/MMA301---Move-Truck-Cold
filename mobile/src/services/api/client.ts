@@ -21,6 +21,8 @@ export type RequestOptions = {
   method?: string;
   body?: unknown;
   sessionToken?: string | null;
+  /** For binary uploads (e.g. cargo images). Takes precedence over `body`/JSON encoding when set. */
+  rawBody?: { data: ArrayBuffer | Blob; contentType: string };
 };
 
 type RawResponse = {
@@ -88,7 +90,8 @@ function nativeRequest(path: string, options: RequestOptions): Promise<RawRespon
     xhr.open((options.method ?? "GET").toUpperCase(), `${apiOrigin}${path}`);
     xhr.timeout = TIMEOUT_MS;
     xhr.setRequestHeader("Accept", "application/json");
-    if (options.body !== undefined) xhr.setRequestHeader("Content-Type", "application/json");
+    if (options.rawBody) xhr.setRequestHeader("Content-Type", options.rawBody.contentType);
+    else if (options.body !== undefined) xhr.setRequestHeader("Content-Type", "application/json");
     if (options.sessionToken) xhr.setRequestHeader("Cookie", `coldi_session=${options.sessionToken}`);
     xhr.onload = () => {
       resolve({
@@ -99,7 +102,8 @@ function nativeRequest(path: string, options: RequestOptions): Promise<RawRespon
     };
     xhr.onerror = () => reject(networkError());
     xhr.ontimeout = () => reject(networkError());
-    xhr.send(options.body === undefined ? null : JSON.stringify(options.body));
+    if (options.rawBody) xhr.send(options.rawBody.data);
+    else xhr.send(options.body === undefined ? null : JSON.stringify(options.body));
   });
 }
 
@@ -108,11 +112,13 @@ async function webRequest(path: string, options: RequestOptions): Promise<RawRes
     const response = await fetch(`${apiOrigin}${path}`, {
       method: options.method ?? "GET",
       credentials: "include",
-      headers: {
-        Accept: "application/json",
-        ...(options.body === undefined ? {} : { "Content-Type": "application/json" }),
-      },
-      body: options.body === undefined ? undefined : JSON.stringify(options.body),
+      headers: options.rawBody
+        ? { Accept: "application/json", "Content-Type": options.rawBody.contentType }
+        : {
+            Accept: "application/json",
+            ...(options.body === undefined ? {} : { "Content-Type": "application/json" }),
+          },
+      body: options.rawBody ? options.rawBody.data : options.body === undefined ? undefined : JSON.stringify(options.body),
     });
     return { status: response.status, body: parseJson(await response.text()), setCookie: null };
   } catch {

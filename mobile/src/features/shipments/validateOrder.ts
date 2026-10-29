@@ -1,4 +1,4 @@
-import type { PublishBody } from "../../services/api/shipments";
+import type { PublishFields } from "../../services/api/shipments";
 import type { TemperatureGroup } from "../../types/shipment";
 
 export type OrderDraft = {
@@ -115,7 +115,7 @@ function measure(raw: string): number | null {
   return scaled / 1000;
 }
 
-export function validateOrder(draft: OrderDraft): { ok: true; body: PublishBody } | { ok: false; fields: Record<string, string>; step: 1 | 2 | 3 } {
+export function validateOrder(draft: OrderDraft): { ok: true; body: PublishFields } | { ok: false; fields: Record<string, string>; step: 1 | 2 | 3 } {
   const fields: Record<string, string> = {};
   const cargoDescription = text(draft.cargoDescription, 300);
   const pickupCompany = text(draft.pickupCompany, 160);

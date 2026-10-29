@@ -6,6 +6,8 @@ import { FieldError } from "../../components/common/FieldError";
 import { PrimaryButton } from "../../components/common/PrimaryButton";
 import { pointer } from "../../constants/hit";
 import { radius, space, useTheme } from "../../constants/theme";
+import { CargoImagePicker } from "../../components/shipment/CargoImagePicker";
+import { CARGO_IMAGE_MAX, CARGO_IMAGE_MIN, useCargoImages } from "../../features/shipments/useCargoImages";
 import { emptyDraft, stepFields, validateOrder, type OrderDraft } from "../../features/shipments/validateOrder";
 import { ApiError } from "../../services/api/client";
 import { createShipment } from "../../services/api/shipments";
@@ -26,6 +28,8 @@ export function CreateOrderScreen({ onCreated }: { onCreated: (id: string) => vo
   const [fields, setFields] = useState<Record<string, string>>({});
   const [formError, setFormError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
+  const cargo = useCargoImages();
+  const [imageNotice, setImageNotice] = useState<string | null>(null);
 
   function set<K extends keyof OrderDraft>(key: K, value: OrderDraft[K]) {
     setDraft((current) => ({ ...current, [key]: value }));
@@ -63,10 +67,19 @@ export function CreateOrderScreen({ onCreated }: { onCreated: (id: string) => vo
       show(result.fields, result.step, "Một số thông tin đơn chưa hợp lệ.");
       return;
     }
+    if (cargo.uploading) {
+      setFormError("Còn ảnh đang tải lên. Hãy đợi xong rồi đăng đơn.");
+      return;
+    }
+    if (cargo.ids.length < CARGO_IMAGE_MIN) {
+      setFormError(`Thêm ít nhất ${CARGO_IMAGE_MIN} ảnh hàng hóa.`);
+      return;
+    }
     setPending(true);
     setFormError(null);
     try {
-      const created = await createShipment(result.body);
+      const created = await createShipment({ ...result.body, cargoImageIds: cargo.ids });
+      cargo.reset();
       setDraft(emptyDraft);
       setStep(1);
       setFields({});
@@ -154,6 +167,14 @@ export function CreateOrderScreen({ onCreated }: { onCreated: (id: string) => vo
             <Field label="Thể tích (m³)" value={draft.cargoVolumeM3} onChangeText={(value) => set("cargoVolumeM3", value)} error={shown.cargoVolumeM3 ?? null} keyboardType="decimal-pad" placeholder="8" />
             <Field label="Số thùng" value={draft.packageCount} onChangeText={(value) => set("packageCount", value.replace(/\D/g, ""))} error={shown.packageCount ?? null} keyboardType="number-pad" />
             <Field label="Yêu cầu xe" value={draft.vehicleRequirement} onChangeText={(value) => set("vehicleRequirement", value)} error={shown.vehicleRequirement ?? null} autoCapitalize="sentences" maxLength={160} />
+            <Text style={[styles.groupLabel, { color: colors.ink }]}>Ảnh hàng hóa ({cargo.ids.length}/{CARGO_IMAGE_MAX})</Text>
+            <CargoImagePicker
+              images={cargo.images}
+              max={CARGO_IMAGE_MAX}
+              onPick={() => void cargo.pickImage().then(setImageNotice)}
+              onRemove={cargo.removeImage}
+              error={imageNotice}
+            />
             <Field label="Cước niêm yết (đồng)" value={draft.listedPriceVnd} onChangeText={(value) => set("listedPriceVnd", value.replace(/\D/g, ""))} error={shown.listedPriceVnd ?? null} keyboardType="number-pad" />
           </View>
         ) : null}

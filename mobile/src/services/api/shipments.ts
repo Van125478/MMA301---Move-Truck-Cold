@@ -12,7 +12,7 @@ import {
 import { apiRequest } from "./client";
 import { authed } from "./authed";
 
-export type PublishBody = {
+export type PublishFields = {
   cargoDescription: string;
   pickupCompany: string;
   pickupLocation: string;
@@ -37,6 +37,8 @@ export type PublishBody = {
   vehicleRequirement: string;
   listedPriceVnd: number;
 };
+
+export type PublishBody = PublishFields & { cargoImageIds: string[] };
 
 export type ListMode = "mine" | "board" | "claimed" | "driver";
 
@@ -168,4 +170,12 @@ export async function loadFleet(): Promise<{ vehicles: FleetVehicle[]; drivers: 
   const vehicles = parseFleet(vehiclesBody).vehicles;
   const drivers = parseFleet(driversBody).drivers;
   return { vehicles, drivers };
+}
+
+/** POST /api/cargo-images — SHIPPER only. Raw image bytes; Content-Type must be image/jpeg|png|webp. */
+export async function uploadCargoImage(data: ArrayBuffer, contentType: string): Promise<string> {
+  const body = await authed<{ image?: { id?: unknown } }>("/api/cargo-images", { method: "POST", rawBody: { data, contentType } });
+  const id = body?.image?.id;
+  if (typeof id !== "string" || id.length === 0) throw new Error("invalid_cargo_image_response");
+  return id;
 }
