@@ -1,5 +1,6 @@
 export type RootStackParamList = {
   Landing: undefined;
+  GuestSaved: undefined;
   Login: undefined;
   Register: undefined;
   ForgotPassword: undefined;

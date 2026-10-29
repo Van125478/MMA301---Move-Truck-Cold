@@ -2,6 +2,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useState, t
 import { useAuth } from "../auth/AuthProvider";
 import {
   favoriteFrom,
+  GUEST_FAVORITES_USER_ID,
   readFavorites,
   upsertFavorite,
   withoutFavorite,
@@ -26,17 +27,12 @@ const FavoritesContext = createContext<FavoritesValue | null>(null);
 
 export function FavoritesProvider({ children }: { children: ReactNode }) {
   const { session } = useAuth();
-  const userId = session.status === "authenticated" ? session.user.id : null;
+  const userId = session.status === "authenticated" ? session.user.id : GUEST_FAVORITES_USER_ID;
   const [items, setItems] = useState<FavoriteRecord[]>([]);
   const [ready, setReady] = useState(false);
 
   useEffect(() => {
     let active = true;
-    if (!userId) {
-      setItems([]);
-      setReady(true);
-      return;
-    }
     setReady(false);
     void readFavorites(userId).then((saved) => {
       if (!active) return;
@@ -51,7 +47,7 @@ export function FavoritesProvider({ children }: { children: ReactNode }) {
   const persist = useCallback(
     async (next: FavoriteRecord[]) => {
       setItems(next);
-      if (userId) await writeFavorites(userId, next);
+      await writeFavorites(userId, next);
     },
     [userId],
   );

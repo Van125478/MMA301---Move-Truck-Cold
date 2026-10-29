@@ -21,6 +21,9 @@ function keyFor(userId: string): string {
   return `coldi.favorites.${userId}`;
 }
 
+/** Khách chưa đăng nhập — lưu yêu thích trên máy, tách key tài khoản. */
+export const GUEST_FAVORITES_USER_ID = "__guest__";
+
 export function favoriteFrom(shipment: Shipment): FavoriteRecord {
   return {
     id: shipment.id,
