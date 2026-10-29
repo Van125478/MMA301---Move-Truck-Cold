@@ -18,7 +18,7 @@ import { attachTimeline, shipmentEventUpdate } from "../shipments/shipmentEvents
 import type { CarrierShipmentDto, ShipmentRecord } from "../shipments/shipmentDto.js";
 
 const forbiddenFields = ["driverId", "carrierId", "status", "shipperId", "vehicleId", "role", "tenantId", "senderId", "rateBps", "calculatedFeeVnd", "planVersionId", "payerAccountId", "commission", "paymentCollected", "listedPriceVnd"] as const;
-const visibleStatuses = ["MATCHED", "IN_TRANSIT", "DELIVERY_CONFIRMED"] as const;
+const visibleStatuses = ["MATCHED", "IN_TRANSIT", "DELIVERY_CONFIRMED", "CANCELLED"] as const;
 
 export type DriverShipmentDto = CarrierShipmentDto & {
   nextAction: "pickup" | "delivery" | "none";

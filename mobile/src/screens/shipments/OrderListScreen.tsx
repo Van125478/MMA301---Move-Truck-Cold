@@ -1,5 +1,5 @@
 import { MaterialCommunityIcons } from "@expo/vector-icons";
-import { useCallback, useMemo, useState, type ComponentProps, type ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useState, type ComponentProps, type ReactNode } from "react";
 import { FlatList, RefreshControl, StyleSheet, Text, View } from "react-native";
 import { useFocusEffect, useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
@@ -23,10 +23,18 @@ import {
   type CatalogFilters,
 } from "../../utils/catalog";
 
-const filters: { id: string; label: string; statuses: readonly ShipmentStatus[] | null }[] = [
+const shipperFilters: { id: string; label: string; statuses: readonly ShipmentStatus[] | null }[] = [
   { id: "all", label: "Tất cả", statuses: null },
   { id: "open", label: "Đang tìm xe", statuses: ["PUBLISHED"] },
   { id: "running", label: "Đang giao", statuses: ["MATCHED", "PICKUP_CONFIRMED", "IN_TRANSIT"] },
+  { id: "done", label: "Đã giao", statuses: ["DELIVERY_CONFIRMED", "COMPLETED"] },
+  { id: "cancelled", label: "Đã hủy", statuses: ["CANCELLED"] },
+];
+
+const driverFilters: { id: string; label: string; statuses: readonly ShipmentStatus[] | null }[] = [
+  { id: "all", label: "Tất cả", statuses: null },
+  { id: "pickup", label: "Chờ lấy hàng", statuses: ["MATCHED"] },
+  { id: "running", label: "Đang giao", statuses: ["PICKUP_CONFIRMED", "IN_TRANSIT"] },
   { id: "done", label: "Đã giao", statuses: ["DELIVERY_CONFIRMED", "COMPLETED"] },
   { id: "cancelled", label: "Đã hủy", statuses: ["CANCELLED"] },
 ];
@@ -51,6 +59,7 @@ export function OrderListScreen({
   hubStatusFilter = null,
   marketplaceOnly = false,
   onListRefresh,
+  listEpoch = 0,
 }: {
   mode: ListMode;
   title: string;
@@ -75,6 +84,8 @@ export function OrderListScreen({
   /** Chỉ hiện sàn tìm đơn (hub Tìm đơn). */
   marketplaceOnly?: boolean;
   onListRefresh?: () => void;
+  /** Tăng sau thao tác trên panel chi tiết (embedded) để tải lại danh sách. */
+  listEpoch?: number;
 }) {
   const { colors } = useTheme();
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
@@ -117,6 +128,11 @@ export function OrderListScreen({
     }, [load]),
   );
 
+  useEffect(() => {
+    if (listEpoch < 1) return;
+    void load(false);
+  }, [listEpoch, load]);
+
   const visibleBoard = useMemo(() => prepareCatalog(marketplace, query, catalogFilters), [catalogFilters, marketplace, query]);
   const ownOrderIds = useMemo(() => new Set((items ?? []).map((row) => row.id)), [items]);
 
@@ -129,10 +145,13 @@ export function OrderListScreen({
         catalogFilters,
       );
     }
+    const statusFilters = mode === "driver" ? driverFilters : shipperFilters;
     const effectiveFilter = hubStatusFilter ?? filter;
-    const selected = filters.find((item) => item.id === effectiveFilter);
+    const selected = statusFilters.find((item) => item.id === effectiveFilter);
     const byStatus =
-      mode === "mine" && selected?.statuses ? source.filter((item) => selected.statuses?.includes(item.status)) : source;
+      (mode === "mine" || mode === "driver") && selected?.statuses
+        ? source.filter((item) => selected.statuses?.includes(item.status))
+        : source;
     return prepareCatalog(byStatus, query, catalogFilters);
   }, [catalogFilters, filter, hubStatusFilter, items, marketplaceOnly, mode, query]);
 
@@ -141,7 +160,8 @@ export function OrderListScreen({
   const filtering = marketplaceOnly
     ? catalogFiltersActive(catalogFilters, query)
     : catalogFiltersActive(catalogFilters, query) ||
-      (mode === "mine" && (hubStatusFilter === "gps" || (hubStatusFilter ?? filter) !== "all"));
+      (mode === "mine" && (hubStatusFilter === "gps" || (hubStatusFilter ?? filter) !== "all")) ||
+      (mode === "driver" && filter !== "all");
 
   if (items === null && error) {
     return (
@@ -229,12 +249,21 @@ export function OrderListScreen({
             <MarketingSectionHead title={sectionTitle} count={listRows.length} />
           ) : marketplaceOnly ? (
             <MarketingSectionHead title="Tìm đơn" count={listRows.length} />
+          ) : mode === "driver" ? (
+            <MarketingSectionHead title="Chuyến được giao" count={listRows.length} />
           ) : mode === "mine" && !hubStatusFilter && !includeMarketplace ? (
             <MarketingSectionHead title="Đơn của bạn" count={listRows.length} />
           ) : null}
           {mode === "mine" && !hubStatusFilter && !marketplaceOnly ? (
             <View style={styles.chipRow}>
-              {filters.map((item) => (
+              {shipperFilters.map((item) => (
+                <ChoiceChip key={item.id} label={item.label} selected={filter === item.id} onPress={() => setFilter(item.id)} />
+              ))}
+            </View>
+          ) : null}
+          {mode === "driver" ? (
+            <View style={styles.chipRow}>
+              {driverFilters.map((item) => (
                 <ChoiceChip key={item.id} label={item.label} selected={filter === item.id} onPress={() => setFilter(item.id)} />
               ))}
             </View>
