@@ -22,6 +22,8 @@ type FieldProps = {
   maxLength?: number;
   autoCapitalize?: TextInputProps["autoCapitalize"];
   multiline?: boolean;
+  /** Trong cùng một khối form — khoảng cách nhỏ hơn. */
+  compact?: boolean;
 };
 
 export function Field({
@@ -42,13 +44,14 @@ export function Field({
   maxLength,
   autoCapitalize = "none",
   multiline = false,
+  compact = false,
 }: FieldProps) {
   const { colors } = useTheme();
   const [focused, setFocused] = useState(false);
   const spoken = error ? `${label}. ${error}` : label;
 
   return (
-    <View style={styles.block}>
+    <View style={[styles.block, compact ? styles.blockCompact : null]}>
       <Text style={[styles.label, { color: colors.ink }]}>{label}</Text>
       <View
         style={[
@@ -104,6 +107,7 @@ export function Field({
 
 const styles = StyleSheet.create({
   block: { marginTop: space.lg },
+  blockCompact: { marginTop: space.md },
   label: { fontFamily: "Inter_600SemiBold", fontSize: 14, lineHeight: 20, marginBottom: space.sm },
   shell: {
     minHeight: 52,

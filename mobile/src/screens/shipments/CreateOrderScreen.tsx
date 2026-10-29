@@ -1,13 +1,14 @@
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import * as ImagePicker from "expo-image-picker";
 import { KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { ChoiceChip } from "../../components/common/Feedback";
 import { DateTimeWheelFields } from "../../components/common/DateTimeWheelFields";
 import { Field } from "../../components/common/Field";
 import { FieldError } from "../../components/common/FieldError";
 import { PrimaryButton } from "../../components/common/PrimaryButton";
 import { pointer } from "../../constants/hit";
-import { radius, space, useTheme } from "../../constants/theme";
+import { panelChrome, radius, space, useTheme, type Palette } from "../../constants/theme";
 import { emptyDraft, stepFields, validateOrder, type OrderDraft } from "../../features/shipments/validateOrder";
 import { ApiError } from "../../services/api/client";
 import { createShipment } from "../../services/api/shipments";
@@ -21,6 +22,12 @@ const temperatureCopy: Record<TemperatureGroup, string> = {
 };
 
 const stepTitle = ["Điểm bốc hàng", "Điểm giao hàng", "Hàng hóa và cước"] as const;
+
+const stepMeta = [
+  { short: "Bốc hàng", icon: "warehouse" as const, hint: "Kho lấy hàng và liên hệ bốc" },
+  { short: "Giao hàng", icon: "map-marker-check" as const, hint: "Điểm giao và người nhận" },
+  { short: "Hàng & cước", icon: "package-variant-closed" as const, hint: "Mô tả, nhiệt độ, giá niêm yết" },
+] as const;
 
 export function CreateOrderScreen({ onCreated }: { onCreated: (id: string) => void }) {
   const { colors } = useTheme();
@@ -96,25 +103,59 @@ export function CreateOrderScreen({ onCreated }: { onCreated: (id: string) => vo
   }
 
   const shown = stepFields(step, fields);
+  const meta = stepMeta[step - 1];
 
   return (
     <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === "ios" ? "padding" : undefined}>
       <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={styles.page}>
-        <Text style={[styles.kicker, { color: colors.primary }]}>BƯỚC {step}/3</Text>
-        <View style={styles.progress} accessibilityRole="progressbar" accessibilityValue={{ min: 1, max: 3, now: step }}>
-          {[1, 2, 3].map((index) => (
-            <View
-              key={index}
-              style={[styles.progressSegment, { backgroundColor: index <= step ? colors.primary : colors.line }]}
-            />
-          ))}
+        <View style={[styles.hero, { backgroundColor: colors.brand }]}>
+          <Text maxFontSizeMultiplier={1.2} style={[styles.heroKicker, { color: colors.onPrimaryMuted }]}>
+            Tạo đơn · Bước {step}/3
+          </Text>
+          <Text accessibilityRole="header" maxFontSizeMultiplier={1.25} style={[styles.heroTitle, { color: colors.onPrimary }]}>
+            {stepTitle[step - 1]}
+          </Text>
+          <Text maxFontSizeMultiplier={1.35} style={[styles.heroLede, { color: colors.onPrimaryMuted }]}>
+            {meta.hint}. Đơn lên sàn ở trạng thái Đang tìm xe.
+          </Text>
+          <View style={styles.stepRow}>
+            {stepMeta.map((item, index) => {
+              const n = (index + 1) as 1 | 2 | 3;
+              const active = n === step;
+              const done = n < step;
+              return (
+                <View
+                  key={item.short}
+                  style={[
+                    styles.stepPill,
+                    {
+                      backgroundColor: active ? colors.surface : "rgba(255,255,255,0.12)",
+                      borderColor: active ? colors.surface : "transparent",
+                    },
+                  ]}
+                >
+                  <MaterialCommunityIcons
+                    name={done ? "check-circle" : item.icon}
+                    size={16}
+                    color={active ? colors.primary : colors.onPrimaryMuted}
+                  />
+                  <Text
+                    maxFontSizeMultiplier={1.1}
+                    style={[
+                      styles.stepPillText,
+                      { color: active ? colors.primary : colors.onPrimaryMuted, fontFamily: active ? "Inter_700Bold" : "Inter_500Medium" },
+                    ]}
+                  >
+                    {item.short}
+                  </Text>
+                </View>
+              );
+            })}
+          </View>
         </View>
-        <Text accessibilityRole="header" style={[styles.title, { color: colors.ink }]}>
-          {stepTitle[step - 1]}
-        </Text>
-        <Text style={[styles.lede, { color: colors.muted }]}>Đơn gửi lên ở trạng thái Đang tìm xe. Chưa gán nhà xe.</Text>
+
         {formError ? (
-          <View accessibilityRole="alert">
+          <View accessibilityRole="alert" style={styles.alertPad}>
             <FieldError message={formError} />
           </View>
         ) : null}
@@ -151,31 +192,47 @@ export function CreateOrderScreen({ onCreated }: { onCreated: (id: string) => vo
           />
         ) : null}
         {step === 3 ? (
-          <View>
-            <Field label="Mô tả hàng hóa" value={draft.cargoDescription} onChangeText={(value) => set("cargoDescription", value)} error={shown.cargoDescription ?? null} autoCapitalize="sentences" multiline maxLength={300} />
-            <Text style={[styles.groupLabel, { color: colors.ink }]}>Nhóm nhiệt</Text>
-            <View style={styles.chips}>
-              {temperatureGroups.map((group) => (
-                <ChoiceChip key={group} label={temperatureCopy[group]} selected={draft.temperatureGroup === group} onPress={() => set("temperatureGroup", group)} />
-              ))}
-            </View>
-            <FieldError message={shown.temperatureGroup ?? null} />
-            <Field label="Trọng lượng (tấn)" value={draft.cargoWeightTon} onChangeText={(value) => set("cargoWeightTon", value)} error={shown.cargoWeightTon ?? null} keyboardType="decimal-pad" placeholder="1.5" />
-            <Field label="Thể tích (m³)" value={draft.cargoVolumeM3} onChangeText={(value) => set("cargoVolumeM3", value)} error={shown.cargoVolumeM3 ?? null} keyboardType="decimal-pad" placeholder="8" />
-            <Field label="Số thùng" value={draft.packageCount} onChangeText={(value) => set("packageCount", value.replace(/\D/g, ""))} error={shown.packageCount ?? null} keyboardType="number-pad" />
-            <Field label="Yêu cầu xe" value={draft.vehicleRequirement} onChangeText={(value) => set("vehicleRequirement", value)} error={shown.vehicleRequirement ?? null} autoCapitalize="sentences" maxLength={160} />
-            <Field label="Cước niêm yết (đồng)" value={draft.listedPriceVnd} onChangeText={(value) => set("listedPriceVnd", value.replace(/\D/g, ""))} error={shown.listedPriceVnd ?? null} keyboardType="number-pad" />
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel="Chọn ảnh hàng hóa"
-              onPress={() => void pickCargoImages(setImageIds, setImageNote)}
-              style={[styles.back, pointer, { borderColor: colors.line }]}
-            >
-              <Text style={[styles.backText, { color: colors.ink }]}>Chọn 1 đến 5 ảnh hàng</Text>
-            </Pressable>
-            <Text style={[styles.groupLabel, { color: imageNote ? colors.danger : colors.muted }]}>
-              {imageNote ?? `Đã chọn ${imageIds.length} ảnh.`}
-            </Text>
+          <View style={styles.formStack}>
+            <FormSection title="Mô tả hàng" icon="clipboard-text-outline" colors={colors}>
+              <Field
+                compact
+                label="Mô tả hàng hóa"
+                value={draft.cargoDescription}
+                onChangeText={(value) => set("cargoDescription", value)}
+                error={shown.cargoDescription ?? null}
+                autoCapitalize="sentences"
+                multiline
+                maxLength={300}
+              />
+              <Text style={[styles.groupLabel, { color: colors.ink }]}>Nhóm nhiệt</Text>
+              <View style={styles.chips}>
+                {temperatureGroups.map((group) => (
+                  <ChoiceChip key={group} label={temperatureCopy[group]} selected={draft.temperatureGroup === group} onPress={() => set("temperatureGroup", group)} />
+                ))}
+              </View>
+              <FieldError message={shown.temperatureGroup ?? null} />
+            </FormSection>
+            <FormSection title="Khối lượng & xe" icon="truck-outline" colors={colors}>
+              <Field compact label="Trọng lượng (tấn)" value={draft.cargoWeightTon} onChangeText={(value) => set("cargoWeightTon", value)} error={shown.cargoWeightTon ?? null} keyboardType="decimal-pad" placeholder="1.5" />
+              <Field compact label="Thể tích (m³)" value={draft.cargoVolumeM3} onChangeText={(value) => set("cargoVolumeM3", value)} error={shown.cargoVolumeM3 ?? null} keyboardType="decimal-pad" placeholder="8" />
+              <Field compact label="Số thùng" value={draft.packageCount} onChangeText={(value) => set("packageCount", value.replace(/\D/g, ""))} error={shown.packageCount ?? null} keyboardType="number-pad" />
+              <Field compact label="Yêu cầu xe" value={draft.vehicleRequirement} onChangeText={(value) => set("vehicleRequirement", value)} error={shown.vehicleRequirement ?? null} autoCapitalize="sentences" maxLength={160} />
+            </FormSection>
+            <FormSection title="Cước & ảnh" icon="cash-multiple" colors={colors}>
+              <Field compact label="Cước niêm yết (đồng)" value={draft.listedPriceVnd} onChangeText={(value) => set("listedPriceVnd", value.replace(/\D/g, ""))} error={shown.listedPriceVnd ?? null} keyboardType="number-pad" />
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="Chọn ảnh hàng hóa"
+                onPress={() => void pickCargoImages(setImageIds, setImageNote)}
+                style={[styles.upload, pointer, { borderColor: colors.line, backgroundColor: colors.field }]}
+              >
+                <MaterialCommunityIcons name="camera-plus-outline" size={22} color={colors.primary} />
+                <Text style={[styles.uploadText, { color: colors.ink }]}>Chọn 1 đến 5 ảnh hàng</Text>
+              </Pressable>
+              <Text style={[styles.uploadNote, { color: imageNote ? colors.danger : colors.muted }]}>
+                {imageNote ?? `Đã chọn ${imageIds.length} ảnh.`}
+              </Text>
+            </FormSection>
           </View>
         ) : null}
         <View style={styles.actions}>
@@ -242,6 +299,7 @@ function PlaceFields({
   errors: Record<string, string>;
   onChange: <K extends keyof OrderDraft>(key: K, value: OrderDraft[K]) => void;
 }) {
+  const { colors } = useTheme();
   const company = `${prefix}Company` as const;
   const location = `${prefix}Location` as const;
   const contact = `${prefix}ContactName` as const;
@@ -251,40 +309,114 @@ function PlaceFields({
   const from = `${prefix}TimeFrom` as const;
   const to = `${prefix}TimeTo` as const;
   return (
-    <View>
-      <Field label={companyLabel} value={draft[company]} onChangeText={(value) => onChange(company, value)} error={errors[company] ?? null} autoCapitalize="words" />
-      <Field label={locationLabel} value={draft[location]} onChangeText={(value) => onChange(location, value)} error={errors[location] ?? null} autoCapitalize="sentences" />
-      <Field label={contactLabel} value={draft[contact]} onChangeText={(value) => onChange(contact, value)} error={errors[contact] ?? null} autoCapitalize="words" />
-      <Field label={phoneLabel} value={draft[phone]} onChangeText={(value) => onChange(phone, value)} error={errors[phone] ?? null} keyboardType="phone-pad" />
-      <Field label={`${emailLabel} (không bắt buộc)`} value={draft[email]} onChangeText={(value) => onChange(email, value)} error={errors[email] ?? null} keyboardType="email-address" autoComplete="email" />
-      <DateTimeWheelFields
-        dateLabel={dateLabel}
-        fromLabel={fromLabel}
-        toLabel={toLabel}
-        dateValue={draft[date]}
-        fromValue={draft[from]}
-        toValue={draft[to]}
-        dateError={errors[date] ?? null}
-        fromError={errors[from] ?? null}
-        toError={errors[to] ?? null}
-        onDateChange={(value) => onChange(date, value)}
-        onFromChange={(value) => onChange(from, value)}
-        onToChange={(value) => onChange(to, value)}
-      />
+    <View style={styles.formStack}>
+      <FormSection title="Kho & địa chỉ" icon="map-marker-radius" colors={colors}>
+        <Field compact label={companyLabel} value={draft[company]} onChangeText={(value) => onChange(company, value)} error={errors[company] ?? null} autoCapitalize="words" />
+        <Field compact label={locationLabel} value={draft[location]} onChangeText={(value) => onChange(location, value)} error={errors[location] ?? null} autoCapitalize="sentences" />
+      </FormSection>
+      <FormSection title="Liên hệ" icon="account-outline" colors={colors}>
+        <Field compact label={contactLabel} value={draft[contact]} onChangeText={(value) => onChange(contact, value)} error={errors[contact] ?? null} autoCapitalize="words" />
+        <Field compact label={phoneLabel} value={draft[phone]} onChangeText={(value) => onChange(phone, value)} error={errors[phone] ?? null} keyboardType="phone-pad" />
+        <Field
+          compact
+          label={`${emailLabel} (không bắt buộc)`}
+          value={draft[email]}
+          onChangeText={(value) => onChange(email, value)}
+          error={errors[email] ?? null}
+          keyboardType="email-address"
+          autoComplete="email"
+        />
+      </FormSection>
+      <FormSection title="Thời gian" icon="clock-outline" colors={colors}>
+        <DateTimeWheelFields
+          dateLabel={dateLabel}
+          fromLabel={fromLabel}
+          toLabel={toLabel}
+          dateValue={draft[date]}
+          fromValue={draft[from]}
+          toValue={draft[to]}
+          dateError={errors[date] ?? null}
+          fromError={errors[from] ?? null}
+          toError={errors[to] ?? null}
+          onDateChange={(value) => onChange(date, value)}
+          onFromChange={(value) => onChange(from, value)}
+          onToChange={(value) => onChange(to, value)}
+        />
+      </FormSection>
+    </View>
+  );
+}
+
+function FormSection({
+  title,
+  icon,
+  colors,
+  children,
+}: {
+  title: string;
+  icon: keyof typeof MaterialCommunityIcons.glyphMap;
+  colors: Palette;
+  children: ReactNode;
+}) {
+  return (
+    <View style={[styles.section, panelChrome(colors)]}>
+      <View style={styles.sectionHead}>
+        <View style={[styles.sectionIcon, { backgroundColor: colors.badge }]}>
+          <MaterialCommunityIcons name={icon} size={18} color={colors.primary} />
+        </View>
+        <Text style={[styles.sectionTitle, { color: colors.ink }]}>{title}</Text>
+      </View>
+      {children}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   flex: { flex: 1 },
-  page: { padding: space.lg, paddingBottom: 96 },
-  kicker: { fontFamily: "Inter_600SemiBold", fontSize: 13, lineHeight: 18, letterSpacing: 1.1 },
-  progress: { marginTop: space.md, flexDirection: "row", gap: space.sm },
-  progressSegment: { flex: 1, height: 4, borderRadius: 999 },
-  title: { marginTop: space.md, fontFamily: "Inter_700Bold", fontSize: 28, lineHeight: 36 },
-  lede: { marginTop: space.sm, fontFamily: "Inter_400Regular", fontSize: 16, lineHeight: 24 },
-  groupLabel: { marginTop: space.lg, fontFamily: "Inter_600SemiBold", fontSize: 14, lineHeight: 20 },
+  page: { paddingHorizontal: space.lg, paddingBottom: 96, flexGrow: 1 },
+  hero: {
+    marginHorizontal: -space.lg,
+    paddingHorizontal: space.lg,
+    paddingTop: space.lg,
+    paddingBottom: space.xl,
+    marginBottom: space.lg,
+  },
+  heroKicker: { fontFamily: "Inter_600SemiBold", fontSize: 12, lineHeight: 16, letterSpacing: 0.6 },
+  heroTitle: { marginTop: space.sm, fontFamily: "Inter_700Bold", fontSize: 24, lineHeight: 32 },
+  heroLede: { marginTop: space.sm, fontFamily: "Inter_400Regular", fontSize: 14, lineHeight: 21 },
+  stepRow: { flexDirection: "row", gap: space.sm, marginTop: space.lg, flexWrap: "wrap" },
+  stepPill: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: space.xs,
+    paddingHorizontal: space.sm,
+    paddingVertical: space.xs,
+    borderRadius: radius.pill,
+    borderWidth: 1,
+  },
+  stepPillText: { fontSize: 12, lineHeight: 16 },
+  alertPad: { marginBottom: space.md },
+  formStack: { gap: space.md },
+  section: { padding: space.lg, gap: 0 },
+  sectionHead: { flexDirection: "row", alignItems: "center", gap: space.sm, marginBottom: space.sm },
+  sectionIcon: { width: 32, height: 32, borderRadius: 10, alignItems: "center", justifyContent: "center" },
+  sectionTitle: { fontFamily: "Inter_700Bold", fontSize: 16, lineHeight: 22 },
+  groupLabel: { marginTop: space.md, fontFamily: "Inter_600SemiBold", fontSize: 14, lineHeight: 20 },
   chips: { flexDirection: "row", flexWrap: "wrap", gap: space.sm, marginTop: space.sm },
+  upload: {
+    marginTop: space.md,
+    minHeight: 52,
+    borderWidth: 1,
+    borderRadius: radius.control,
+    borderStyle: "dashed",
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: space.sm,
+    paddingHorizontal: space.md,
+  },
+  uploadText: { fontFamily: "Inter_600SemiBold", fontSize: 15, lineHeight: 22 },
+  uploadNote: { marginTop: space.sm, fontFamily: "Inter_400Regular", fontSize: 13, lineHeight: 18 },
   actions: { marginTop: space.xl, flexDirection: "row", alignItems: "center", gap: space.md },
   back: { minHeight: 52, paddingHorizontal: space.lg, borderWidth: 1, borderRadius: radius.control, alignItems: "center", justifyContent: "center" },
   backText: { fontFamily: "Inter_600SemiBold", fontSize: 16, lineHeight: 24 },
