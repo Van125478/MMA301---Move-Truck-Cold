@@ -104,25 +104,34 @@ export function SearchField({
 
 export function ChoiceChip({ label, selected, onPress }: { label: string; selected: boolean; onPress: () => void }) {
   const { colors } = useTheme();
+  const compact = label.replace(/ /g, "\u00A0");
   return (
-    <Pressable
-      accessibilityRole="button"
-      accessibilityState={{ selected }}
-      accessibilityLabel={label}
-      android_ripple={{ color: selected ? colors.onPrimaryMuted : colors.line, borderless: false }}
-      onPress={onPress}
-      style={({ pressed }) => [
-        styles.chip,
-        pointer,
-        pressed ? styles.chipPressed : null,
-        {
-          backgroundColor: selected ? colors.primary : colors.surface,
-          borderColor: selected ? colors.primary : colors.line,
-        },
-      ]}
-    >
-      <Text style={[styles.chipText, { color: selected ? colors.onPrimary : colors.ink }]}>{label}</Text>
-    </Pressable>
+    <View style={styles.chipShell}>
+      <Pressable
+        accessibilityRole="button"
+        accessibilityState={{ selected }}
+        accessibilityLabel={label}
+        android_ripple={{ color: selected ? colors.onPrimaryMuted : colors.line, borderless: false }}
+        onPress={onPress}
+        style={({ pressed }) => [
+          styles.chip,
+          pointer,
+          pressed ? styles.chipPressed : null,
+          {
+            backgroundColor: selected ? colors.primary : colors.surface,
+            borderColor: selected ? colors.primary : colors.line,
+          },
+        ]}
+      >
+        <Text
+          maxFontSizeMultiplier={1.15}
+          numberOfLines={1}
+          style={[styles.chipText, { color: selected ? colors.onPrimary : colors.ink }]}
+        >
+          {compact}
+        </Text>
+      </Pressable>
+    </View>
   );
 }
 
@@ -189,9 +198,17 @@ const styles = StyleSheet.create({
   searchLabel: { fontFamily: "Inter_600SemiBold", fontSize: 14, lineHeight: 20 },
   searchShell: { minHeight: 52, borderWidth: 1, borderRadius: radius.control, flexDirection: "row", alignItems: "center", paddingHorizontal: space.md },
   searchInput: { flex: 1, minHeight: 48, marginLeft: space.sm, fontFamily: "Inter_400Regular", fontSize: 16 },
-  chip: { minHeight: 44, borderWidth: 1, borderRadius: 999, paddingHorizontal: space.lg, alignItems: "center", justifyContent: "center", overflow: "hidden" },
+  chipShell: { flexShrink: 0, maxWidth: "100%", alignSelf: "flex-start" },
+  chip: {
+    minHeight: 44,
+    borderWidth: 1,
+    borderRadius: 999,
+    paddingHorizontal: space.lg,
+    alignItems: "center",
+    justifyContent: "center",
+  },
   chipPressed: { opacity: 0.82 },
-  chipText: { fontFamily: "Inter_600SemiBold", fontSize: 14, lineHeight: 20 },
+  chipText: { fontFamily: "Inter_600SemiBold", fontSize: 14, lineHeight: 20, includeFontPadding: false },
   modalBackdrop: { flex: 1, backgroundColor: "rgba(15, 23, 42, 0.48)", justifyContent: "center", padding: space.xl },
   dialog: { borderRadius: radius.card, padding: space.xl, maxWidth: 440, width: "100%", alignSelf: "center" },
   dialogTitle: { fontFamily: "Inter_700Bold", fontSize: 22, lineHeight: 30 },
