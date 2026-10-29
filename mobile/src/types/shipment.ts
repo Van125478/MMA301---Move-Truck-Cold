@@ -64,6 +64,7 @@ export type Shipment = {
   deliveryConfirmedAt: string | null;
   nextAction: NextAction | null;
   timeline: TimelineEvent[];
+  hasGpsUpdate: boolean;
 };
 
 export type TrackingView = {
@@ -216,6 +217,7 @@ export function parseShipment(value: unknown): Shipment {
     deliveryConfirmedAt: text(record.deliveryConfirmedAt),
     nextAction: nextAction === "pickup" || nextAction === "delivery" || nextAction === "none" ? nextAction : null,
     timeline: parseTimeline(record.timeline),
+    hasGpsUpdate: record.hasGpsUpdate === true,
   };
 }
 

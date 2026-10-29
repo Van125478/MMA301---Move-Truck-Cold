@@ -1,4 +1,5 @@
 import { temperatureLabels, type ShipmentStatus, type TemperatureGroup } from "../models/shipment.js";
+import { toTrackingDto, type StoredLocation } from "../gps/trackingView.js";
 
 export type ShipmentDto = {
   id: string;
@@ -39,6 +40,8 @@ export type ShipmentDto = {
   deliveryConfirmedAt: string | null;
   createdAt: string;
   updatedAt: string;
+  /** Có điểm GPS hiển thị được (đã nhận ping từ tài xế). */
+  hasGpsUpdate: boolean;
 };
 
 const statusLabels: Record<ShipmentStatus, string> = {
@@ -88,6 +91,7 @@ export type ShipmentRecord = {
   deliveryConfirmedAt?: Date | null;
   createdAt: Date;
   updatedAt: Date;
+  latestLocation?: StoredLocation | null;
 };
 
 function instantOrNull(value: Date | null | undefined): string | null {
@@ -158,6 +162,7 @@ export function toShipmentDto(
     deliveryConfirmedAt: instantOrNull(shipment.deliveryConfirmedAt),
     createdAt: shipment.createdAt.toISOString(),
     updatedAt: shipment.updatedAt.toISOString(),
+    hasGpsUpdate: toTrackingDto(shipment.status, shipment.latestLocation).location !== null,
   };
 }
 
