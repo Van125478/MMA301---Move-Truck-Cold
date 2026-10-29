@@ -1,10 +1,11 @@
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { useCallback, useMemo, useState, type ComponentProps, type ReactNode } from "react";
-import { FlatList, Platform, RefreshControl, ScrollView, StyleSheet, Text, View } from "react-native";
+import { FlatList, RefreshControl, StyleSheet, Text, View } from "react-native";
 import { useFocusEffect, useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { ChoiceChip, EmptyState, ErrorState, LoadingBlock, SearchField } from "../../components/common/Feedback";
 import { PrimaryButton } from "../../components/common/PrimaryButton";
+import { CatalogFilterBar } from "../../components/layout/CatalogFilterBar";
 import { BoardListPromoHero } from "../../components/layout/BoardListPromoHero";
 import { MarketingSectionHead } from "../../components/layout/MarketingSectionHead";
 import { ShipmentCard } from "../../components/shipment/ShipmentCard";
@@ -15,12 +16,17 @@ import type { RootStackParamList } from "../../navigation/types";
 import { ApiError } from "../../services/api/client";
 import { listMarketplaceShipments, listShipments, type ListMode } from "../../services/api/shipments";
 import type { Shipment, ShipmentStatus } from "../../types/shipment";
-import { prepareCatalog, temperatureFilters, type TemperatureFilter } from "../../utils/catalog";
+import {
+  catalogFiltersActive,
+  defaultCatalogFilters,
+  prepareCatalog,
+  type CatalogFilters,
+} from "../../utils/catalog";
 
 const filters: { id: string; label: string; statuses: readonly ShipmentStatus[] | null }[] = [
   { id: "all", label: "Tất cả", statuses: null },
   { id: "open", label: "Đang tìm xe", statuses: ["PUBLISHED"] },
-  { id: "running", label: "Đang chạy", statuses: ["MATCHED", "PICKUP_CONFIRMED", "IN_TRANSIT"] },
+  { id: "running", label: "Đang giao", statuses: ["MATCHED", "PICKUP_CONFIRMED", "IN_TRANSIT"] },
   { id: "done", label: "Đã giao", statuses: ["DELIVERY_CONFIRMED", "COMPLETED"] },
   { id: "cancelled", label: "Đã hủy", statuses: ["CANCELLED"] },
 ];
@@ -42,6 +48,9 @@ export function OrderListScreen({
   promoArtIcon,
   onOpenFavorites,
   headerAddon,
+  hubStatusFilter = null,
+  marketplaceOnly = false,
+  onListRefresh,
 }: {
   mode: ListMode;
   title: string;
@@ -61,6 +70,11 @@ export function OrderListScreen({
   promoArtIcon?: ComponentProps<typeof MaterialCommunityIcons>["name"];
   onOpenFavorites?: () => void;
   headerAddon?: ReactNode;
+  /** Khi chọn hub chủ hàng: lọc cố định và ẩn chip trạng thái. */
+  hubStatusFilter?: "running" | "gps" | null;
+  /** Chỉ hiện sàn tìm đơn (hub Tìm đơn). */
+  marketplaceOnly?: boolean;
+  onListRefresh?: () => void;
 }) {
   const { colors } = useTheme();
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
@@ -72,7 +86,9 @@ export function OrderListScreen({
   const [refreshing, setRefreshing] = useState(false);
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState("all");
-  const [group, setGroup] = useState<TemperatureFilter>("ALL");
+  const [catalogFilters, setCatalogFilters] = useState<CatalogFilters>(defaultCatalogFilters);
+
+  const loadBoard = includeMarketplace || marketplaceOnly;
 
   const load = useCallback(
     async (pull: boolean) => {
@@ -80,18 +96,19 @@ export function OrderListScreen({
       try {
         const [rows, board] = await Promise.all([
           listShipments(mode),
-          includeMarketplace ? listMarketplaceShipments() : Promise.resolve([] as Shipment[]),
+          loadBoard ? listMarketplaceShipments() : Promise.resolve([] as Shipment[]),
         ]);
         setItems(rows);
         setMarketplace(board);
         setError(null);
+        onListRefresh?.();
       } catch (caught) {
         setError(classifyListError(caught));
       } finally {
         setRefreshing(false);
       }
     },
-    [includeMarketplace, mode],
+    [includeMarketplace, loadBoard, mode, onListRefresh],
   );
 
   useFocusEffect(
@@ -100,18 +117,31 @@ export function OrderListScreen({
     }, [load]),
   );
 
-  const visibleBoard = useMemo(() => prepareCatalog(marketplace, query, group), [group, marketplace, query]);
+  const visibleBoard = useMemo(() => prepareCatalog(marketplace, query, catalogFilters), [catalogFilters, marketplace, query]);
   const ownOrderIds = useMemo(() => new Set((items ?? []).map((row) => row.id)), [items]);
 
   const visible = useMemo(() => {
     const source = items ?? [];
-    const selected = filters.find((item) => item.id === filter);
+    if (mode === "mine" && hubStatusFilter === "gps") {
+      return prepareCatalog(
+        source.filter((item) => item.hasGpsUpdate),
+        query,
+        catalogFilters,
+      );
+    }
+    const effectiveFilter = hubStatusFilter ?? filter;
+    const selected = filters.find((item) => item.id === effectiveFilter);
     const byStatus =
       mode === "mine" && selected?.statuses ? source.filter((item) => selected.statuses?.includes(item.status)) : source;
-    return prepareCatalog(byStatus, query, group);
-  }, [filter, group, items, mode, query]);
+    return prepareCatalog(byStatus, query, catalogFilters);
+  }, [catalogFilters, filter, hubStatusFilter, items, marketplaceOnly, mode, query]);
 
-  const filtering = query.trim().length > 0 || (mode === "mine" && filter !== "all") || group !== "ALL";
+  const listRows = marketplaceOnly ? visibleBoard : visible;
+
+  const filtering = marketplaceOnly
+    ? catalogFiltersActive(catalogFilters, query)
+    : catalogFiltersActive(catalogFilters, query) ||
+      (mode === "mine" && (hubStatusFilter === "gps" || (hubStatusFilter ?? filter) !== "all"));
 
   if (items === null && error) {
     return (
@@ -132,14 +162,14 @@ export function OrderListScreen({
 
   return (
     <FlatList
-      data={visible}
-      keyExtractor={(item) => item.id}
+      data={listRows}
+      keyExtractor={(item) => (marketplaceOnly ? `find-${item.id}` : item.id)}
       refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => void load(true)} tintColor={colors.primary} />}
       contentContainerStyle={styles.list}
       style={styles.fill}
       keyboardShouldPersistTaps="handled"
       keyboardDismissMode="on-drag"
-      removeClippedSubviews={Platform.OS === "android"}
+      removeClippedSubviews={false}
       ListHeaderComponent={
         <View style={styles.header}>
           {boardPromo ? (
@@ -174,12 +204,7 @@ export function OrderListScreen({
             </Text>
           ) : null}
           {!boardPromo ? <SearchField hideLabel={marketing} label={searchLabel} value={query} onChangeText={setQuery} /> : null}
-          <Text style={[styles.sortNote, { color: colors.muted }]}>Giá cao đến thấp</Text>
-          <ScrollView horizontal nestedScrollEnabled showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chips}>
-            {temperatureFilters.map((item) => (
-              <ChoiceChip key={item.id} label={item.label} selected={group === item.id} onPress={() => setGroup(item.id)} />
-            ))}
-          </ScrollView>
+          <CatalogFilterBar filters={catalogFilters} onChange={(patch) => setCatalogFilters((current) => ({ ...current, ...patch }))} />
           {primaryAction ? <PrimaryButton spaced={false} label={primaryAction.label} onPress={primaryAction.onPress} /> : null}
           {includeMarketplace ? (
             <>
@@ -201,14 +226,18 @@ export function OrderListScreen({
               <MarketingSectionHead title="Đơn của bạn" count={visible.length} />
             </>
           ) : sectionTitle ? (
-            <MarketingSectionHead title={sectionTitle} count={visible.length} />
+            <MarketingSectionHead title={sectionTitle} count={listRows.length} />
+          ) : marketplaceOnly ? (
+            <MarketingSectionHead title="Tìm đơn" count={listRows.length} />
+          ) : mode === "mine" && !hubStatusFilter && !includeMarketplace ? (
+            <MarketingSectionHead title="Đơn của bạn" count={listRows.length} />
           ) : null}
-          {mode === "mine" ? (
-            <ScrollView horizontal nestedScrollEnabled showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chips}>
+          {mode === "mine" && !hubStatusFilter && !marketplaceOnly ? (
+            <View style={styles.chipRow}>
               {filters.map((item) => (
                 <ChoiceChip key={item.id} label={item.label} selected={filter === item.id} onPress={() => setFilter(item.id)} />
               ))}
-            </ScrollView>
+            </View>
           ) : null}
         </View>
       }
@@ -216,11 +245,15 @@ export function OrderListScreen({
         <ShipmentCard
           shipment={item}
           saved={favorites.has(item.id)}
-          onOpen={() => (onOpenDetail ? onOpenDetail(item.id) : navigation.navigate("ShipmentDetail", { id: item.id }))}
+          onOpen={() => {
+            if (marketplaceOnly && !ownOrderIds.has(item.id)) return;
+            if (onOpenDetail) onOpenDetail(item.id);
+            else navigation.navigate("ShipmentDetail", { id: item.id });
+          }}
           onToggleFavorite={() => void favorites.toggle(item)}
         />
       )}
-      ItemSeparatorComponent={() => <View style={marketing || includeMarketplace ? styles.gapWide : styles.gap} />}
+      ItemSeparatorComponent={() => <View style={marketing || includeMarketplace || marketplaceOnly ? styles.gapWide : styles.gap} />}
       ListEmptyComponent={
         filtering ? (
           <View style={styles.emptyFilter}>
@@ -231,7 +264,7 @@ export function OrderListScreen({
               onPress={() => {
                 setQuery("");
                 setFilter("all");
-                setGroup("ALL");
+                setCatalogFilters(defaultCatalogFilters);
               }}
             />
           </View>
@@ -251,8 +284,13 @@ const styles = StyleSheet.create({
   title: { ...type.screenTitle },
   lede: { ...type.body },
   error: { fontFamily: "Inter_500Medium", fontSize: 14, lineHeight: 20 },
-  sortNote: { fontFamily: "Inter_600SemiBold", fontSize: 13, lineHeight: 18 },
-  chips: { gap: space.sm, paddingVertical: space.xs },
+  chipRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    alignItems: "center",
+    gap: space.sm,
+    paddingVertical: space.xs,
+  },
   gap: { height: space.md },
   gapWide: { height: space.lg },
   inlineCard: { marginBottom: space.lg },

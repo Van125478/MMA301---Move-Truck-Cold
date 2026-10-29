@@ -1,8 +1,8 @@
 import { useCallback, useMemo, useState } from "react";
-import { FlatList, Platform, RefreshControl, ScrollView, StyleSheet, Text, View } from "react-native";
+import { FlatList, Platform, RefreshControl, StyleSheet, Text, View } from "react-native";
 import { useFocusEffect, useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
-import { ChoiceChip, EmptyState, ErrorState, LoadingBlock } from "../../components/common/Feedback";
+import { EmptyState, ErrorState, LoadingBlock } from "../../components/common/Feedback";import { CatalogFilterBar } from "../../components/layout/CatalogFilterBar";
 import { BoardListPromoHero } from "../../components/layout/BoardListPromoHero";
 import { ShipmentCard } from "../../components/shipment/ShipmentCard";
 import {
@@ -18,9 +18,12 @@ import type { RootStackParamList } from "../../navigation/types";
 import { ApiError } from "../../services/api/client";
 import { listShipments } from "../../services/api/shipments";
 import type { Shipment } from "../../types/shipment";
-import { prepareCatalog, temperatureFilters, type TemperatureFilter } from "../../utils/catalog";
-
-const temperatureChips = temperatureFilters.filter((item) => item.id !== "ALL");
+import {
+  catalogFiltersActive,
+  defaultCatalogFilters,
+  prepareCatalog,
+  type CatalogFilters,
+} from "../../utils/catalog";
 
 export function ClaimedTripsScreen({ onOpenDetail }: { onOpenDetail?: (id: string) => void }) {
   const { colors } = useTheme();
@@ -31,7 +34,7 @@ export function ClaimedTripsScreen({ onOpenDetail }: { onOpenDetail?: (id: strin
   const [error, setError] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
   const [query, setQuery] = useState("");
-  const [group, setGroup] = useState<TemperatureFilter>("ALL");
+  const [catalogFilters, setCatalogFilters] = useState<CatalogFilters>(defaultCatalogFilters);
   const [bucket, setBucket] = useState<ClaimedViewFilter>("all");
 
   const load = useCallback(
@@ -72,9 +75,9 @@ export function ClaimedTripsScreen({ onOpenDetail }: { onOpenDetail?: (id: strin
     return bucket === "all" ? source : source.filter((row) => claimedBucket(row) === bucket);
   }, [bucket, items]);
 
-  const visible = useMemo(() => prepareCatalog(filtered, query, group), [filtered, group, query]);
+  const visible = useMemo(() => prepareCatalog(filtered, query, catalogFilters), [catalogFilters, filtered, query]);
 
-  const filtering = bucket !== "all" || group !== "ALL" || query.trim().length > 0;
+  const filtering = bucket !== "all" || catalogFiltersActive(catalogFilters, query);
 
   const open = useCallback(
     (id: string) => {
@@ -83,10 +86,6 @@ export function ClaimedTripsScreen({ onOpenDetail }: { onOpenDetail?: (id: strin
     },
     [navigation, onOpenDetail],
   );
-
-  const toggleTemperature = useCallback((id: TemperatureFilter) => {
-    setGroup((current) => (current === id ? "ALL" : id));
-  }, []);
 
   if (items === null && error) return <ErrorState message={error} onRetry={() => void load(false)} />;
   if (items === null) return <LoadingBlock label="Đang tải chuyến đã nhận" />;
@@ -117,14 +116,12 @@ export function ClaimedTripsScreen({ onOpenDetail }: { onOpenDetail?: (id: strin
             </Text>
           ) : null}
           <ClaimedStatusFilters active={bucket} counts={counts} onChange={setBucket} />
-          <Text style={[styles.sortNote, { color: colors.muted }]}>Giá cao đến thấp</Text>
-          <ScrollView horizontal nestedScrollEnabled showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chips}>
-            {temperatureChips.map((item) => (
-              <ChoiceChip key={item.id} label={item.label} selected={group === item.id} onPress={() => toggleTemperature(item.id)} />
-            ))}
-          </ScrollView>
-          <Text style={[styles.section, { color: colors.ink }]}>Danh sách chuyến · {visible.length}</Text>
-        </View>
+          <CatalogFilterBar
+            hideVehicleAll
+            filters={catalogFilters}
+            onChange={(patch) => setCatalogFilters((current) => ({ ...current, ...patch }))}
+          />
+          <Text style={[styles.section, { color: colors.ink }]}>Danh sách chuyến · {visible.length}</Text>        </View>
       }
       renderItem={({ item }) => (
         <ShipmentCard
@@ -150,8 +147,5 @@ const styles = StyleSheet.create({
   list: { padding: space.lg, paddingBottom: 96, flexGrow: 1 },
   header: { gap: space.md, marginBottom: space.lg },
   error: { fontFamily: "Inter_500Medium", fontSize: 14, lineHeight: 20 },
-  sortNote: { fontFamily: "Inter_600SemiBold", fontSize: 13, lineHeight: 18 },
-  chips: { gap: space.sm, paddingVertical: space.xs },
-  section: { fontFamily: "Inter_600SemiBold", fontSize: 15, lineHeight: 22 },
-  gap: { height: space.md },
+  section: { fontFamily: "Inter_600SemiBold", fontSize: 15, lineHeight: 22 },  gap: { height: space.md },
 });

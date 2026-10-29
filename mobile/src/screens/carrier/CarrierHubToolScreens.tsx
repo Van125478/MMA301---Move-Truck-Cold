@@ -158,9 +158,11 @@ export function CarrierTransactionHistoryScreen({
 export function CarrierIncidentLookupScreen({
   hub,
   onOpenDetail,
+  emptyListBody = "Sự cố trên chuyến nhà xe sẽ hiện ở đây.",
 }: {
   hub: ReactNode;
   onOpenDetail: (shipmentId: string) => void;
+  emptyListBody?: string;
 }) {
   const { colors } = useTheme();
   const [items, setItems] = useState<IncidentRow[] | null>(null);
@@ -218,7 +220,7 @@ export function CarrierIncidentLookupScreen({
       {visible.length === 0 ? (
         <EmptyState
           title={query.trim() ? "Không có sự cố khớp" : "Chưa có sự cố"}
-          body={query.trim() ? "Thử từ khóa khác." : "Sự cố trên chuyến nhà xe sẽ hiện ở đây."}
+          body={query.trim() ? "Thử từ khóa khác." : emptyListBody}
         />
       ) : (
         visible.map((row, index) => (

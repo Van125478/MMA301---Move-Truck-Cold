@@ -18,6 +18,7 @@ import { ClaimedTripsScreen } from "../shipments/ClaimedTripsScreen";
 import { OrderListScreen } from "../shipments/OrderListScreen";
 import { ShipmentDetailPanel } from "../shipments/ShipmentDetailScreen";
 import { CarrierBoardScreen } from "../carrier/CarrierBoardScreen";
+import { ShipperOrdersScreen } from "../shipper/ShipperOrdersScreen";
 
 const shipperTabs: TabItem[] = [
   { id: "orders", label: "Đơn hàng", icon: "clipboard-text-outline" },
@@ -117,19 +118,10 @@ export function WorkspaceScreen() {
             {detailId ? <ShipmentDetailPanel shipmentId={detailId} onClose={() => setDetailId(null)} /> : null}
             {role === "SHIPPER" ? (
               <Pane visible={!detailId && tab === "orders"}>
-                <OrderListScreen
-                  mode="mine"
-                  boardPromo
-                  promoArtIcon="package-variant-closed"
-                  title="Đơn hàng"
-                  lede="Chủ động gửi hàng lạnh, theo dõi hành trình rõ ràng."
-                  searchPlaceholder="Mô tả hàng, điểm lấy, điểm giao"
-                  includeMarketplace
-                  onOpenFavorites={() => changeTab("saved")}
-                  primaryAction={{ label: "Tạo đơn mới", onPress: () => changeTab("create") }}
-                  emptyTitle="Chưa có đơn"
-                  emptyBody="Bấm Tạo đơn mới để niêm yết nhu cầu vận chuyển lạnh."
+                <ShipperOrdersScreen
                   onOpenDetail={openDetailProp}
+                  onOpenFavorites={() => changeTab("saved")}
+                  onCreateOrder={() => changeTab("create")}
                 />
               </Pane>
             ) : null}

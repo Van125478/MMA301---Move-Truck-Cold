@@ -12,7 +12,7 @@ import { useFavorites } from "../../features/favorites/FavoritesProvider";
 import { favoriteFrom } from "../../features/favorites/store";
 import type { RootStackParamList } from "../../navigation/types";
 import type { Shipment } from "../../types/shipment";
-import { prepareCatalog } from "../../utils/catalog";
+import { defaultCatalogFilters, prepareCatalog } from "../../utils/catalog";
 
 export function FavoritesScreen({
   onOpenDetail,
@@ -63,7 +63,7 @@ export function FavoritesScreen({
   const itemCount = favorites.items.length;
   const visibleItems = useMemo(() => {
     const rows = favorites.items.map((item) => snapshotShipment(item));
-    return boardPromo ? prepareCatalog(rows, query, "ALL") : rows;
+    return boardPromo ? prepareCatalog(rows, query, defaultCatalogFilters) : rows;
   }, [boardPromo, favorites.items, query]);
   const visibleCount = visibleItems.length;
   const selectedCount = selectedIds.size;

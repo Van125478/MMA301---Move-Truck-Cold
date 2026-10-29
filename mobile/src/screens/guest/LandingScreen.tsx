@@ -1,11 +1,12 @@
 import { useCallback, useMemo, useRef, useState } from "react";
-import { FlatList, RefreshControl, ScrollView, StyleSheet, Text, View } from "react-native";
+import { FlatList, RefreshControl, StyleSheet, Text, View } from "react-native";
 import { useFocusEffect, useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { ChoiceChip, ErrorState, LoadingBlock } from "../../components/common/Feedback";
+import { ErrorState, LoadingBlock } from "../../components/common/Feedback";
 import { PhoneFrame } from "../../components/common/PhoneFrame";
 import { PrimaryButton } from "../../components/common/PrimaryButton";
+import { CatalogFilterBar } from "../../components/layout/CatalogFilterBar";
 import { BoardListPromoHero } from "../../components/layout/BoardListPromoHero";
 import { MarketingSectionHead } from "../../components/layout/MarketingSectionHead";
 import { DomesticDieselCard } from "../../components/market/DomesticDieselCard";
@@ -13,19 +14,21 @@ import { ScreenTopBar } from "../../components/layout/ScreenTopBar";
 import { GuestTabBar } from "../../components/navigation/GuestTabBar";
 import { ShipmentCard } from "../../components/shipment/ShipmentCard";
 import { space, useTheme } from "../../constants/theme";
+import { useFavorites } from "../../features/favorites/FavoritesProvider";
 import type { RootStackParamList } from "../../navigation/types";
 import { listMarketplaceShipments } from "../../services/api/shipments";
 import type { Shipment } from "../../types/shipment";
-import { prepareCatalog, temperatureFilters, type TemperatureFilter } from "../../utils/catalog";
+import { defaultCatalogFilters, prepareCatalog, type CatalogFilters } from "../../utils/catalog";
 
 export function LandingScreen() {
   const { colors } = useTheme();
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
+  const favorites = useFavorites();
   const [items, setItems] = useState<Shipment[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
   const [query, setQuery] = useState("");
-  const [group, setGroup] = useState<TemperatureFilter>("ALL");
+  const [catalogFilters, setCatalogFilters] = useState<CatalogFilters>(defaultCatalogFilters);
   const loaded = useRef(false);
 
   const load = useCallback(async (pull: boolean) => {
@@ -49,7 +52,7 @@ export function LandingScreen() {
     }, [load]),
   );
 
-  const visible = useMemo(() => prepareCatalog(items ?? [], query, group), [group, items, query]);
+  const visible = useMemo(() => prepareCatalog(items ?? [], query, catalogFilters), [catalogFilters, items, query]);
 
   return (
     <SafeAreaView edges={["top", "left", "right"]} style={[styles.safe, { backgroundColor: colors.background }]}>
@@ -77,13 +80,12 @@ export function LandingScreen() {
                     query={query}
                     onChangeQuery={setQuery}
                     searchPlaceholder="Mô tả hàng, điểm lấy, điểm giao"
+                    onFavoritesPress={() => navigation.navigate("GuestSaved")}
                   />
-                  <Text style={[styles.sortNote, { color: colors.muted }]}>Giá cao đến thấp</Text>
-                  <ScrollView horizontal nestedScrollEnabled showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chips}>
-                    {temperatureFilters.map((item) => (
-                      <ChoiceChip key={item.id} label={item.label} selected={group === item.id} onPress={() => setGroup(item.id)} />
-                    ))}
-                  </ScrollView>
+                  <CatalogFilterBar
+                    filters={catalogFilters}
+                    onChange={(patch) => setCatalogFilters((current) => ({ ...current, ...patch }))}
+                  />
                   <DomesticDieselCard />
                 <PrimaryButton spaced={false} label="Đăng nhập để đăng đơn" onPress={() => navigation.navigate("Login")} />
                   <MarketingSectionHead title="Đơn đang tìm xe" count={visible.length} />
@@ -94,7 +96,14 @@ export function LandingScreen() {
                   ) : null}
                 </View>
               }
-              renderItem={({ item }) => <ShipmentCard shipment={item} saved={false} onOpen={() => navigation.navigate("Login")} />}
+              renderItem={({ item }) => (
+                <ShipmentCard
+                  shipment={item}
+                  saved={favorites.has(item.id)}
+                  onOpen={() => navigation.navigate("Login")}
+                  onToggleFavorite={() => void favorites.toggle(item)}
+                />
+              )}
               ItemSeparatorComponent={() => <View style={styles.gap} />}
               ListEmptyComponent={<Text style={[styles.empty, { color: colors.muted }]}>Không có đơn khớp bộ lọc.</Text>}
             />
@@ -114,8 +123,6 @@ const styles = StyleSheet.create({
   list: { padding: space.lg, paddingBottom: space.xxl, flexGrow: 1 },
   header: { gap: space.md, marginBottom: space.lg },
   error: { fontFamily: "Inter_500Medium", fontSize: 14, lineHeight: 20 },
-  sortNote: { fontFamily: "Inter_600SemiBold", fontSize: 13, lineHeight: 18 },
-  chips: { gap: space.sm, paddingVertical: space.xs },
   gap: { height: space.lg },
   empty: { textAlign: "center", marginTop: space.xl, fontFamily: "Inter_400Regular", fontSize: 16, lineHeight: 24 },
 });
