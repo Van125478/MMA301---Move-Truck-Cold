@@ -48,10 +48,12 @@ function ShipmentDetailBody({
   shipmentId,
   presentation,
   onClose,
+  onShipmentChanged,
 }: {
   shipmentId: string;
   presentation: DetailPresentation;
   onClose?: () => void;
+  onShipmentChanged?: () => void;
 }) {
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
@@ -165,6 +167,10 @@ function ShipmentDetailBody({
                 : await assignShipment(shipment.id, vehicleId ?? "", driverId ?? "");
       setShipment(next);
       setConfirm(null);
+      if (action === "pickup" || action === "delivery") {
+        if (role === "DRIVER" && next.status !== "IN_TRANSIT") stopLiveShare();
+        await load();
+      }
       if (action === "assign") {
         setVehicleId(null);
         setDriverId(null);
@@ -185,8 +191,8 @@ function ShipmentDetailBody({
         });
       }
       if (role === "DRIVER" && action === "pickup" && next.status === "IN_TRANSIT") startLiveShare(next.id);
-      if (role === "DRIVER" && action === "delivery") stopLiveShare();
       await favorites.refreshSaved(next);
+      onShipmentChanged?.();
     } catch (caught) {
       if (caught instanceof ApiError && caught.status === 401) {
         await logout();
@@ -360,8 +366,23 @@ export function ShipmentDetailScreen() {
   return <ShipmentDetailBody shipmentId={route.params.id} presentation="stack" />;
 }
 
-export function ShipmentDetailPanel({ shipmentId, onClose }: { shipmentId: string; onClose: () => void }) {
-  return <ShipmentDetailBody shipmentId={shipmentId} presentation="embedded" onClose={onClose} />;
+export function ShipmentDetailPanel({
+  shipmentId,
+  onClose,
+  onShipmentChanged,
+}: {
+  shipmentId: string;
+  onClose: () => void;
+  onShipmentChanged?: () => void;
+}) {
+  return (
+    <ShipmentDetailBody
+      shipmentId={shipmentId}
+      presentation="embedded"
+      onClose={onClose}
+      onShipmentChanged={onShipmentChanged}
+    />
+  );
 }
 
 const confirmCopy: Record<Action, { title: string; body: string; confirm: string }> = {

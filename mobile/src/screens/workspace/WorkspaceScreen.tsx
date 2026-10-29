@@ -96,6 +96,7 @@ export function WorkspaceScreen() {
   }, [role, savedCount]);
   const [tab, setTab] = useState(tabs[0]?.id ?? "account");
   const [detailId, setDetailId] = useState<string | null>(null);
+  const [listEpoch, setListEpoch] = useState(0);
 
   function openDetail(id: string) {
     setDetailId(id);
@@ -115,7 +116,13 @@ export function WorkspaceScreen() {
         <View style={styles.shell}>
           {detailId ? null : <ScreenTopBar />}
           <View style={styles.body}>
-            {detailId ? <ShipmentDetailPanel shipmentId={detailId} onClose={() => setDetailId(null)} /> : null}
+            {detailId ? (
+              <ShipmentDetailPanel
+                shipmentId={detailId}
+                onClose={() => setDetailId(null)}
+                onShipmentChanged={() => setListEpoch((value) => value + 1)}
+              />
+            ) : null}
             {role === "SHIPPER" ? (
               <Pane visible={!detailId && tab === "orders"}>
                 <ShipperOrdersScreen
@@ -149,6 +156,7 @@ export function WorkspaceScreen() {
               <Pane visible={!detailId && tab === "trips"}>
                 <OrderListScreen
                   mode="driver"
+                  listEpoch={listEpoch}
                   boardPromo
                   promoArtIcon="steering"
                   title="Chuyến được giao"
