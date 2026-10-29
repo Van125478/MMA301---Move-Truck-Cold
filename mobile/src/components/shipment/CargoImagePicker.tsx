@@ -1,7 +1,7 @@
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { ActivityIndicator, Image, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { radius, space, useTheme } from "../../constants/theme";
-import type { PickedCargoImage } from "../../features/shipments/useCreateShipmentForm";
+import type { PickedCargoImage } from "../../features/shipments/useCargoImages";
 
 export function CargoImagePicker({
   images,

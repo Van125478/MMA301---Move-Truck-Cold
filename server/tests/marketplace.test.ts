@@ -252,6 +252,29 @@ test("the load board lists only published shipments and honors allowed filters",
   });
 });
 
+test("public marketplace browse needs no auth and hides contact fields", async () => {
+  await withServer(async (baseUrl) => {
+    const created = await publish(baseUrl, await login(baseUrl, shipperEmail), {
+      cargoDescription: "Hàng công khai C13",
+      pickupLocation: "Long An",
+      deliveryLocation: "Bình Dương",
+      temperatureGroup: "COOL",
+      listedPriceVnd: 4_500_000,
+      pickupDate: "2026-12-10",
+      deliveryDate: "2026-12-11",
+      cargoWeightTon: 3,
+    });
+    const response = await fetch(`${baseUrl}/api/marketplace/shipments?q=${encodeURIComponent("Hàng công khai")}`);
+    assert.equal(response.status, 200);
+    const body = (await response.json()) as { shipments?: Json[] };
+    const row = body.shipments?.find((item) => String(item.id) === String(created.id));
+    assert.ok(row);
+    assert.equal(row.pickupPhone, null);
+    assert.equal(row.pickupEmail, null);
+    assert.equal(row.deliveryPhone, null);
+  });
+});
+
 test("chat and an unknown bookmark route do not claim a shipment", async () => {
   await withServer(async (baseUrl) => {
     const created = await publish(baseUrl, await login(baseUrl, shipperEmail), {

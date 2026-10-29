@@ -1,3 +1,5 @@
+import { ApiError } from "../services/api/client";
+
 export const shipmentStatuses = [
   "DRAFT",
   "PUBLISHED",
@@ -16,18 +18,23 @@ export const temperatureGroups = ["COOL", "FROZEN", "DEEP_FROZEN"] as const;
 
 export type TemperatureGroup = (typeof temperatureGroups)[number];
 
-export type ShipmentCargoImage = { id: string };
+export type NextAction = "pickup" | "delivery" | "none";
 
-/** Mirrors server ShipmentDto in server/src/shipments/shipmentDto.ts. GET /mine omits `timeline`; GET /:id includes it. */
+export type TimelineEvent = {
+  id: string;
+  label: string;
+  occurredAt: string;
+  detail: string | null;
+  statusAfterLabel: string;
+};
+
 export type Shipment = {
   id: string;
-  shipperId: string;
   cargoDescription: string;
   pickupCompany: string | null;
   pickupLocation: string;
   pickupContactName: string | null;
   pickupPhone: string | null;
-  pickupEmail: string | null;
   pickupDate: string | null;
   pickupTimeFrom: string | null;
   pickupTimeTo: string | null;
@@ -35,7 +42,6 @@ export type Shipment = {
   deliveryLocation: string;
   deliveryContactName: string | null;
   deliveryPhone: string | null;
-  deliveryEmail: string | null;
   deliveryDate: string | null;
   deliveryTimeFrom: string | null;
   deliveryTimeTo: string | null;
@@ -46,7 +52,6 @@ export type Shipment = {
   temperatureLabel: string;
   vehicleRequirement: string;
   listedPriceVnd: number;
-  cargoImages: ShipmentCargoImage[];
   status: ShipmentStatus;
   statusLabel: string;
   carrierId: string | null;
@@ -56,109 +61,205 @@ export type Shipment = {
   driverName: string | null;
   pickupConfirmedAt: string | null;
   deliveryConfirmedAt: string | null;
-  createdAt: string;
-  updatedAt: string;
+  nextAction: NextAction | null;
+  timeline: TimelineEvent[];
 };
 
-export type ShipmentTimelineEvent = {
+export type TrackingView = {
+  phaseLabel: string;
+  latitude: number | null;
+  longitude: number | null;
+};
+
+export type FleetVehicle = {
   id: string;
-  type: "PUBLISHED" | "CLAIMED" | "ASSIGNED" | "PICKUP_CONFIRMED" | "DELIVERY_CONFIRMED" | "CANCELLED";
   label: string;
-  occurredAt: string;
-  actorRole: "SHIPPER" | "CARRIER" | "DRIVER";
-  actorLabel: string;
-  statusAfter: ShipmentStatus;
-  statusAfterLabel: string;
-  detail: string | null;
-  recorded: boolean;
-  sequence: number;
+  plate: string | null;
+  temperatureLabel: string | null;
+  availableForAssignment: boolean;
 };
 
-export type ShipmentTimeline = {
-  completeness: "recorded" | "partial";
-  note: string | null;
-  events: ShipmentTimelineEvent[];
+export type FleetDriver = {
+  id: string;
+  name: string;
+  accountStatus: "ACTIVE" | "LOCKED";
+  mustChangePassword: boolean;
 };
 
-export type ShipmentDetail = Shipment & { timeline: ShipmentTimeline };
-
-function str(value: unknown): string {
-  return typeof value === "string" ? value : "";
-}
-
-function strOrNull(value: unknown): string | null {
-  return typeof value === "string" ? value : null;
-}
-
-function numOrNull(value: unknown): number | null {
-  return typeof value === "number" && Number.isFinite(value) ? value : null;
-}
+const invalid = new ApiError(0, "invalid_response", "Máy chủ trả về đơn không đúng cấu trúc.");
 
 const statusSet = new Set<string>(shipmentStatuses);
 const temperatureSet = new Set<string>(temperatureGroups);
 
-export function parseShipment(value: unknown): Shipment | null {
-  if (typeof value !== "object" || value === null) return null;
-  const record = value as Record<string, unknown>;
-  const id = record.id;
-  const shipperId = record.shipperId;
+const phaseLabels: Record<string, string> = {
+  not_started: "Chưa bắt đầu theo dõi vị trí",
+  waiting_for_fix: "Đang chờ vị trí từ tài xế",
+  current: "Vị trí đang cập nhật",
+  stale: "Vị trí đã cũ",
+  ended: "Đã kết thúc theo dõi",
+};
+
+function recordOf(value: unknown): Record<string, unknown> {
+  if (typeof value !== "object" || value === null || Array.isArray(value)) throw invalid;
+  return value as Record<string, unknown>;
+}
+
+function text(value: unknown): string | null {
+  if (typeof value !== "string") return null;
+  const trimmed = value.trim();
+  return trimmed.length === 0 ? null : trimmed;
+}
+
+function requiredText(record: Record<string, unknown>, key: string): string {
+  const value = text(record[key]);
+  if (!value) throw invalid;
+  return value;
+}
+
+function numberOrNull(value: unknown): number | null {
+  return typeof value === "number" && Number.isFinite(value) ? value : null;
+}
+
+function parseTimeline(value: unknown): TimelineEvent[] {
+  if (typeof value !== "object" || value === null || !("events" in value)) return [];
+  const events = (value as { events?: unknown }).events;
+  if (!Array.isArray(events)) return [];
+  return events.flatMap((event) => {
+    if (typeof event !== "object" || event === null) return [];
+    const row = event as Record<string, unknown>;
+    const label = text(row.label);
+    const occurredAt = text(row.occurredAt);
+    if (!label || !occurredAt) return [];
+    return [
+      {
+        id: text(row.id) ?? `${occurredAt}-${label}`,
+        label,
+        occurredAt,
+        detail: text(row.detail),
+        statusAfterLabel: text(row.statusAfterLabel) ?? "",
+      },
+    ];
+  });
+}
+
+export function parseShipment(value: unknown): Shipment {
+  const record = recordOf(value);
   const status = record.status;
   const temperatureGroup = record.temperatureGroup;
-  if (typeof id !== "string" || id.length === 0) return null;
-  if (typeof shipperId !== "string") return null;
-  if (typeof status !== "string" || !statusSet.has(status)) return null;
-  if (typeof temperatureGroup !== "string" || !temperatureSet.has(temperatureGroup)) return null;
-  const imagesRaw = record.cargoImages;
-  const cargoImages: ShipmentCargoImage[] = Array.isArray(imagesRaw)
-    ? imagesRaw
-        .map((entry) => (typeof entry === "object" && entry !== null && typeof (entry as { id?: unknown }).id === "string" ? { id: (entry as { id: string }).id } : null))
-        .filter((entry): entry is ShipmentCargoImage => entry !== null)
-    : [];
+  const price = record.listedPriceVnd;
+  if (typeof status !== "string" || !statusSet.has(status)) throw invalid;
+  if (typeof temperatureGroup !== "string" || !temperatureSet.has(temperatureGroup)) throw invalid;
+  if (typeof price !== "number" || !Number.isSafeInteger(price) || price < 0) throw invalid;
+  const nextAction = record.nextAction;
   return {
-    id,
-    shipperId,
-    cargoDescription: str(record.cargoDescription),
-    pickupCompany: strOrNull(record.pickupCompany),
-    pickupLocation: str(record.pickupLocation),
-    pickupContactName: strOrNull(record.pickupContactName),
-    pickupPhone: strOrNull(record.pickupPhone),
-    pickupEmail: strOrNull(record.pickupEmail),
-    pickupDate: strOrNull(record.pickupDate),
-    pickupTimeFrom: strOrNull(record.pickupTimeFrom),
-    pickupTimeTo: strOrNull(record.pickupTimeTo),
-    deliveryCompany: strOrNull(record.deliveryCompany),
-    deliveryLocation: str(record.deliveryLocation),
-    deliveryContactName: strOrNull(record.deliveryContactName),
-    deliveryPhone: strOrNull(record.deliveryPhone),
-    deliveryEmail: strOrNull(record.deliveryEmail),
-    deliveryDate: strOrNull(record.deliveryDate),
-    deliveryTimeFrom: strOrNull(record.deliveryTimeFrom),
-    deliveryTimeTo: strOrNull(record.deliveryTimeTo),
-    cargoWeightTon: numOrNull(record.cargoWeightTon),
-    cargoVolumeM3: numOrNull(record.cargoVolumeM3),
-    packageCount: numOrNull(record.packageCount),
+    id: requiredText(record, "id"),
+    cargoDescription: requiredText(record, "cargoDescription"),
+    pickupCompany: text(record.pickupCompany),
+    pickupLocation: requiredText(record, "pickupLocation"),
+    pickupContactName: text(record.pickupContactName),
+    pickupPhone: text(record.pickupPhone),
+    pickupDate: text(record.pickupDate),
+    pickupTimeFrom: text(record.pickupTimeFrom),
+    pickupTimeTo: text(record.pickupTimeTo),
+    deliveryCompany: text(record.deliveryCompany),
+    deliveryLocation: requiredText(record, "deliveryLocation"),
+    deliveryContactName: text(record.deliveryContactName),
+    deliveryPhone: text(record.deliveryPhone),
+    deliveryDate: text(record.deliveryDate),
+    deliveryTimeFrom: text(record.deliveryTimeFrom),
+    deliveryTimeTo: text(record.deliveryTimeTo),
+    cargoWeightTon: numberOrNull(record.cargoWeightTon),
+    cargoVolumeM3: numberOrNull(record.cargoVolumeM3),
+    packageCount: numberOrNull(record.packageCount),
     temperatureGroup: temperatureGroup as TemperatureGroup,
-    temperatureLabel: str(record.temperatureLabel),
-    vehicleRequirement: str(record.vehicleRequirement),
-    listedPriceVnd: numOrNull(record.listedPriceVnd) ?? 0,
-    cargoImages,
+    temperatureLabel: text(record.temperatureLabel) ?? temperatureGroup,
+    vehicleRequirement: text(record.vehicleRequirement) ?? "",
+    listedPriceVnd: price,
     status: status as ShipmentStatus,
-    statusLabel: str(record.statusLabel),
-    carrierId: strOrNull(record.carrierId),
-    vehicleId: strOrNull(record.vehicleId),
-    driverId: strOrNull(record.driverId),
-    vehicleLabel: strOrNull(record.vehicleLabel),
-    driverName: strOrNull(record.driverName),
-    pickupConfirmedAt: strOrNull(record.pickupConfirmedAt),
-    deliveryConfirmedAt: strOrNull(record.deliveryConfirmedAt),
-    createdAt: str(record.createdAt),
-    updatedAt: str(record.updatedAt),
+    statusLabel: text(record.statusLabel) ?? status,
+    carrierId: text(record.carrierId),
+    vehicleId: text(record.vehicleId),
+    driverId: text(record.driverId),
+    vehicleLabel: text(record.vehicleLabel),
+    driverName: text(record.driverName),
+    pickupConfirmedAt: text(record.pickupConfirmedAt),
+    deliveryConfirmedAt: text(record.deliveryConfirmedAt),
+    nextAction: nextAction === "pickup" || nextAction === "delivery" || nextAction === "none" ? nextAction : null,
+    timeline: parseTimeline(record.timeline),
   };
 }
 
-export function parseShipmentList(value: unknown): Shipment[] {
+export function parseShipmentList(body: unknown): Shipment[] {
+  const record = recordOf(body);
+  if (!Array.isArray(record.shipments)) throw invalid;
+  return record.shipments.map(parseShipment);
+}
+
+export function parseShipmentBody(body: unknown): Shipment {
+  const record = recordOf(body);
+  return parseShipment(record.shipment);
+}
+
+export function parseTracking(body: unknown): TrackingView | null {
+  const record = recordOf(body);
+  const tracking = record.tracking;
+  if (typeof tracking !== "object" || tracking === null) return null;
+  const row = tracking as Record<string, unknown>;
+  const phase = text(row.phase);
+  const location = row.location;
+  let latitude: number | null = null;
+  let longitude: number | null = null;
+  if (typeof location === "object" && location !== null) {
+    const point = location as Record<string, unknown>;
+    if (typeof point.latitude === "number" && typeof point.longitude === "number") {
+      latitude = point.latitude;
+      longitude = point.longitude;
+    }
+  }
+  return {
+    phaseLabel: phase ? (phaseLabels[phase] ?? "Chưa có vị trí") : "Chưa có vị trí",
+    latitude,
+    longitude,
+  };
+}
+
+export function parseFleet(body: unknown): { vehicles: FleetVehicle[]; drivers: FleetDriver[] } {
+  const record = recordOf(body);
+  return {
+    vehicles: Array.isArray(record.vehicles) ? record.vehicles.flatMap(parseVehicle) : [],
+    drivers: Array.isArray(record.drivers) ? record.drivers.flatMap(parseDriver) : [],
+  };
+}
+
+function parseVehicle(value: unknown): FleetVehicle[] {
   if (typeof value !== "object" || value === null) return [];
-  const list = (value as { shipments?: unknown }).shipments;
-  if (!Array.isArray(list)) return [];
-  return list.map(parseShipment).filter((entry): entry is Shipment => entry !== null);
+  const row = value as Record<string, unknown>;
+  const id = text(row.id);
+  const label = text(row.label);
+  if (!id || !label) return [];
+  return [
+    {
+      id,
+      label,
+      plate: text(row.plate),
+      temperatureLabel: text(row.temperatureLabel),
+      availableForAssignment: row.availableForAssignment === true,
+    },
+  ];
+}
+
+function parseDriver(value: unknown): FleetDriver[] {
+  if (typeof value !== "object" || value === null) return [];
+  const row = value as Record<string, unknown>;
+  const id = text(row.id);
+  if (!id) return [];
+  const name = text(row.displayName) ?? text(row.username) ?? text(row.email) ?? "Tài xế";
+  return [
+    {
+      id,
+      name,
+      accountStatus: row.accountStatus === "LOCKED" ? "LOCKED" : "ACTIVE",
+      mustChangePassword: row.mustChangePassword === true,
+    },
+  ];
 }
