@@ -1,4 +1,4 @@
-import { Image, Pressable, StyleSheet, Text, View, type ImageSourcePropType } from "react-native";
+import { Image, Pressable, StyleSheet, Text, View, type ImageSourcePropType, type ReactNode } from "react-native";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { pointer } from "../../constants/hit";
 import { elevatedCard, radius, space, type, useTheme } from "../../constants/theme";
@@ -26,9 +26,10 @@ type Props = {
   saved?: boolean;
   onPress: () => void;
   onToggleFavorite?: () => void;
+  appendBody?: ReactNode;
 };
 
-export function FreightListCard({ model, variant = "list", saved, onPress, onToggleFavorite }: Props) {
+export function FreightListCard({ model, variant = "list", saved, onPress, onToggleFavorite, appendBody }: Props) {
   const { colors } = useTheme();
   const routeLine = `${model.pickupLocation} → ${model.deliveryLocation}`;
   const heroHeight = variant === "showcase" ? 180 : 128;
@@ -123,6 +124,10 @@ export function FreightListCard({ model, variant = "list", saved, onPress, onTog
             </View>
           ) : null}
         </Pressable>
+
+        {appendBody ? (
+          <View style={[styles.append, { borderTopColor: colors.line }]}>{appendBody}</View>
+        ) : null}
       </View>
     </View>
   );
@@ -179,4 +184,5 @@ const styles = StyleSheet.create({
     borderRadius: radius.control,
   },
   ctaButtonText: { fontFamily: "Inter_600SemiBold", fontSize: 15, lineHeight: 22 },
+  append: { marginTop: space.md, paddingTop: space.md, borderTopWidth: StyleSheet.hairlineWidth },
 });

@@ -1,4 +1,4 @@
-import { memo } from "react";
+import { memo, type ReactNode } from "react";
 import { vehicleKindLabel } from "../../utils/catalog";
 import { cargoHeroImage } from "../../utils/cargoHeroImage";
 import { formatPickupShort } from "../../utils/format";
@@ -10,6 +10,7 @@ type CardProps = {
   saved: boolean;
   onOpen: () => void;
   onToggleFavorite?: () => void;
+  appendBody?: ReactNode;
 };
 
 function vehicleLine(shipment: Shipment): string | null {
@@ -37,7 +38,7 @@ function toModel(shipment: Shipment): FreightCardModel {
   };
 }
 
-function Card({ shipment, saved, onOpen, onToggleFavorite }: CardProps) {
+function Card({ shipment, saved, onOpen, onToggleFavorite, appendBody }: CardProps) {
   return (
     <FreightListCard
       variant="list"
@@ -45,6 +46,7 @@ function Card({ shipment, saved, onOpen, onToggleFavorite }: CardProps) {
       saved={saved}
       onPress={onOpen}
       onToggleFavorite={onToggleFavorite}
+      appendBody={appendBody}
     />
   );
 }
