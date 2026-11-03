@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { FlatList, Platform, RefreshControl, ScrollView, StyleSheet, Text, View } from "react-native";
 import { useFocusEffect, useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
@@ -11,15 +11,18 @@ import { useAuth } from "../../features/auth/AuthProvider";
 import { useFavorites } from "../../features/favorites/FavoritesProvider";
 import type { RootStackParamList } from "../../navigation/types";
 import { ApiError } from "../../services/api/client";
-import { listMarketplaceShipments, listShipments, type ListMode } from "../../services/api/shipments";
+import { listMarketplaceShipments, listMyShipments, listShipments, type ListMode } from "../../services/api/shipments";
 import type { Shipment, ShipmentStatus } from "../../types/shipment";
 import { prepareCatalog, temperatureFilters, type TemperatureFilter } from "../../utils/catalog";
+
+const PAGE_SIZE = 20;
 
 const filters: { id: string; label: string; statuses: readonly ShipmentStatus[] | null }[] = [
   { id: "all", label: "Tất cả", statuses: null },
   { id: "open", label: "Đang tìm xe", statuses: ["PUBLISHED"] },
   { id: "running", label: "Đang chạy", statuses: ["MATCHED", "PICKUP_CONFIRMED", "IN_TRANSIT"] },
   { id: "done", label: "Đã giao", statuses: ["DELIVERY_CONFIRMED", "COMPLETED"] },
+  { id: "incident", label: "Có sự cố", statuses: ["INCIDENT"] },
   { id: "cancelled", label: "Đã hủy", statuses: ["CANCELLED"] },
 ];
 
@@ -35,6 +38,7 @@ export function OrderListScreen({
   sectionTitle,
   primaryAction,
   includeMarketplace = false,
+  refreshKey = 0,
 }: {
   mode: ListMode;
   title: string;
@@ -49,6 +53,8 @@ export function OrderListScreen({
   primaryAction?: { label: string; onPress: () => void };
   /** Block sàn (cùng API Landing) phía trên danh sách của chủ hàng. */
   includeMarketplace?: boolean;
+  /** Đổi giá trị này để tải lại danh sách (sau khi tạo, hủy hoặc đóng chi tiết). */
+  refreshKey?: number;
 }) {
   const { colors } = useTheme();
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
@@ -57,34 +63,89 @@ export function OrderListScreen({
   const [items, setItems] = useState<Shipment[] | null>(null);
   const [marketplace, setMarketplace] = useState<Shipment[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const [marketError, setMarketError] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [moreError, setMoreError] = useState<string | null>(null);
+  const [hasMore, setHasMore] = useState(false);
+  const [total, setTotal] = useState<number | null>(null);
   const [query, setQuery] = useState("");
+  const [debouncedQuery, setDebouncedQuery] = useState("");
   const [filter, setFilter] = useState("all");
   const [group, setGroup] = useState<TemperatureFilter>("ALL");
+  const page = useRef(1);
+  const requestId = useRef(0);
+  const serverSide = mode === "mine";
+
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedQuery(query), 300);
+    return () => clearTimeout(timer);
+  }, [query]);
+
+  const statusesOf = filters.find((item) => item.id === filter)?.statuses ?? undefined;
 
   const load = useCallback(
     async (pull: boolean) => {
+      const current = ++requestId.current;
       if (pull) setRefreshing(true);
       try {
-        const [rows, board] = await Promise.all([
-          listShipments(mode),
-          includeMarketplace ? listMarketplaceShipments() : Promise.resolve([] as Shipment[]),
-        ]);
-        setItems(rows);
-        setMarketplace(board);
+        const rows = serverSide
+          ? await listMyShipments({ statuses: statusesOf, temperatureGroup: group, q: debouncedQuery, page: 1, limit: PAGE_SIZE })
+          : await listShipments(mode);
+        if (current !== requestId.current) return;
+        page.current = 1;
+        if (Array.isArray(rows)) {
+          setItems(rows);
+          setHasMore(false);
+          setTotal(null);
+        } else {
+          setItems(rows.shipments);
+          setHasMore(rows.hasMore);
+          setTotal(rows.total);
+        }
+        setMoreError(null);
         setError(null);
       } catch (caught) {
+        if (current !== requestId.current) return;
         if (caught instanceof ApiError && caught.status === 401) {
           await logout();
           return;
         }
         setError(caught instanceof ApiError ? caught.message : "Không tải được danh sách.");
       } finally {
-        setRefreshing(false);
+        if (current === requestId.current) setRefreshing(false);
       }
     },
-    [includeMarketplace, logout, mode],
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [debouncedQuery, filter, group, logout, mode, serverSide, refreshKey],
   );
+
+  const loadMore = useCallback(async () => {
+    if (!serverSide || !hasMore || loadingMore || items === null) return;
+    const current = requestId.current;
+    setLoadingMore(true);
+    setMoreError(null);
+    try {
+      const next = await listMyShipments({ statuses: statusesOf, temperatureGroup: group, q: debouncedQuery, page: page.current + 1, limit: PAGE_SIZE });
+      if (current !== requestId.current) return;
+      page.current += 1;
+      setItems((previous) => {
+        const seen = new Set((previous ?? []).map((row) => row.id));
+        return [...(previous ?? []), ...next.shipments.filter((row) => !seen.has(row.id))];
+      });
+      setHasMore(next.hasMore);
+      setTotal(next.total);
+    } catch (caught) {
+      if (caught instanceof ApiError && caught.status === 401) {
+        await logout();
+        return;
+      }
+      setMoreError(caught instanceof ApiError ? caught.message : "Không tải thêm được đơn.");
+    } finally {
+      setLoadingMore(false);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [debouncedQuery, filter, group, hasMore, items, loadingMore, logout, serverSide]);
 
   useFocusEffect(
     useCallback(() => {
@@ -92,16 +153,35 @@ export function OrderListScreen({
     }, [load]),
   );
 
+  useEffect(() => {
+    if (!includeMarketplace) return;
+    let alive = true;
+    listMarketplaceShipments()
+      .then((board) => {
+        if (!alive) return;
+        setMarketplace(board);
+        setMarketError(null);
+      })
+      .catch(async (caught: unknown) => {
+        if (!alive) return;
+        if (caught instanceof ApiError && caught.status === 401) {
+          await logout();
+          return;
+        }
+        setMarketError(caught instanceof ApiError ? caught.message : "Không tải được sàn đơn đang tìm xe.");
+      });
+    return () => {
+      alive = false;
+    };
+  }, [includeMarketplace, logout, refreshKey]);
+
   const visibleBoard = useMemo(() => prepareCatalog(marketplace, query, group), [group, marketplace, query]);
   const ownOrderIds = useMemo(() => new Set((items ?? []).map((row) => row.id)), [items]);
 
   const visible = useMemo(() => {
     const source = items ?? [];
-    const selected = filters.find((item) => item.id === filter);
-    const byStatus =
-      mode === "mine" && selected?.statuses ? source.filter((item) => selected.statuses?.includes(item.status)) : source;
-    return prepareCatalog(byStatus, query, group);
-  }, [filter, group, items, mode, query]);
+    return serverSide ? source : prepareCatalog(source, query, group);
+  }, [group, items, query, serverSide]);
 
   if (items === null && error) return <ErrorState message={error} onRetry={() => void load(false)} />;
   if (items === null) return <LoadingBlock label="Đang tải danh sách" />;
@@ -113,6 +193,8 @@ export function OrderListScreen({
       data={visible}
       keyExtractor={(item) => item.id}
       refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => void load(true)} tintColor={colors.primary} />}
+      onEndReached={() => void loadMore()}
+      onEndReachedThreshold={0.4}
       contentContainerStyle={styles.list}
       style={styles.fill}
       keyboardShouldPersistTaps="handled"
@@ -137,7 +219,7 @@ export function OrderListScreen({
             </Text>
           ) : null}
           <SearchField hideLabel={marketing} label={searchLabel} value={query} onChangeText={setQuery} />
-          <Text style={[styles.sortNote, { color: colors.muted }]}>Giá cao đến thấp</Text>
+          <Text style={[styles.sortNote, { color: colors.muted }]}>{serverSide ? "Mới nhất trước" : "Giá cao đến thấp"}</Text>
           <ScrollView horizontal nestedScrollEnabled showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chips}>
             {temperatureFilters.map((item) => (
               <ChoiceChip key={item.id} label={item.label} selected={group === item.id} onPress={() => setGroup(item.id)} />
@@ -147,6 +229,11 @@ export function OrderListScreen({
           {includeMarketplace ? (
             <>
               <MarketingSectionHead title="Đơn đang tìm xe" count={visibleBoard.length} />
+              {marketError ? (
+                <Text accessibilityRole="alert" style={[styles.error, { color: colors.danger }]}>
+                  {marketError}
+                </Text>
+              ) : null}
               {visibleBoard.map((item) => (
                 <View key={`board-${item.id}`} style={styles.inlineCard}>
                   <ShipmentCard
@@ -161,10 +248,10 @@ export function OrderListScreen({
                   />
                 </View>
               ))}
-              <MarketingSectionHead title="Đơn của bạn" count={visible.length} />
+              <MarketingSectionHead title="Đơn của bạn" count={total ?? visible.length} />
             </>
           ) : sectionTitle ? (
-            <MarketingSectionHead title={sectionTitle} count={visible.length} />
+            <MarketingSectionHead title={sectionTitle} count={total ?? visible.length} />
           ) : null}
           {mode === "mine" ? (
             <ScrollView horizontal nestedScrollEnabled showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chips}>
@@ -184,6 +271,21 @@ export function OrderListScreen({
         />
       )}
       ItemSeparatorComponent={() => <View style={marketing || includeMarketplace ? styles.gapWide : styles.gap} />}
+      ListFooterComponent={
+        serverSide && (loadingMore || moreError || hasMore) ? (
+          <View style={styles.footer}>
+            {loadingMore ? <LoadingBlock label="Đang tải thêm" /> : null}
+            {moreError ? (
+              <Text accessibilityRole="alert" style={[styles.error, { color: colors.danger }]}>
+                {moreError}
+              </Text>
+            ) : null}
+            {!loadingMore && (moreError || hasMore) ? (
+              <PrimaryButton spaced={false} label={moreError ? "Thử tải lại" : "Tải thêm"} onPress={() => void loadMore()} />
+            ) : null}
+          </View>
+        ) : undefined
+      }
       ListEmptyComponent={
         <EmptyState
           title={query.trim() || filter !== "all" || group !== "ALL" ? "Không có đơn khớp" : emptyTitle}
@@ -208,4 +310,5 @@ const styles = StyleSheet.create({
   gapWide: { height: space.lg },
   inlineCard: { marginBottom: space.lg },
   fill: { flex: 1 },
+  footer: { gap: space.md, paddingTop: space.lg },
 });

@@ -28,6 +28,7 @@ import {
 } from "../../services/api/shipments";
 import { readDeviceFix } from "../../services/location/deviceFix";
 import type { FleetDriver, FleetVehicle, Shipment, TrackingView } from "../../types/shipment";
+import { CargoGallery } from "../../components/shipment/CargoGallery";
 import { ReviewSection } from "../../components/shipment/ReviewSection";
 import { cargoHeroImage } from "../../utils/cargoHeroImage";
 import { formatVnd, formatWhen, formatWindow } from "../../utils/format";
@@ -40,10 +41,12 @@ function ShipmentDetailBody({
   shipmentId,
   presentation,
   onClose,
+  onChanged,
 }: {
   shipmentId: string;
   presentation: DetailPresentation;
   onClose?: () => void;
+  onChanged?: () => void;
 }) {
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
@@ -140,6 +143,7 @@ function ShipmentDetailBody({
                 : await assignShipment(shipment.id, vehicleId ?? "", driverId ?? "");
       setShipment(next);
       setConfirm(null);
+      onChanged?.();
       await favorites.refreshSaved(next);
     } catch (caught) {
       if (caught instanceof ApiError && caught.status === 401) {
@@ -229,6 +233,7 @@ function ShipmentDetailBody({
         </Section>
 
         <Section title="Hàng và xe">
+          <CargoGallery ids={shipment.cargoImageIds} />
           <Fact label="Nhóm nhiệt" value={shipment.temperatureLabel} />
           <Fact label="Yêu cầu xe" value={shipment.vehicleRequirement || "Chưa ghi"} />
           <Fact label="Khối lượng" value={shipment.cargoWeightTon == null ? "Chưa ghi" : `${shipment.cargoWeightTon} tấn`} />
@@ -372,8 +377,8 @@ export function ShipmentDetailScreen() {
   return <ShipmentDetailBody shipmentId={route.params.id} presentation="stack" />;
 }
 
-export function ShipmentDetailPanel({ shipmentId, onClose }: { shipmentId: string; onClose: () => void }) {
-  return <ShipmentDetailBody shipmentId={shipmentId} presentation="embedded" onClose={onClose} />;
+export function ShipmentDetailPanel({ shipmentId, onClose, onChanged }: { shipmentId: string; onClose: () => void; onChanged?: () => void }) {
+  return <ShipmentDetailBody shipmentId={shipmentId} presentation="embedded" onClose={onClose} onChanged={onChanged} />;
 }
 
 function vehicleLabel(vehicle: FleetVehicle): string {
