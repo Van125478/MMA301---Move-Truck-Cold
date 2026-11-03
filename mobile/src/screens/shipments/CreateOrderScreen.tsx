@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { ChoiceChip } from "../../components/common/Feedback";
+import { DateTimeField, todayIso } from "../../components/common/DateTimeField";
 import { Field } from "../../components/common/Field";
 import { FieldError } from "../../components/common/FieldError";
 import { PrimaryButton } from "../../components/common/PrimaryButton";
@@ -228,6 +229,7 @@ function PlaceFields({
   const date = `${prefix}Date` as const;
   const from = `${prefix}TimeFrom` as const;
   const to = `${prefix}TimeTo` as const;
+  const minDate = prefix === "delivery" && draft.pickupDate ? (draft.pickupDate > todayIso() ? draft.pickupDate : todayIso()) : todayIso();
   return (
     <View>
       <Field label={companyLabel} value={draft[company]} onChangeText={(value) => onChange(company, value)} error={errors[company] ?? null} autoCapitalize="words" />
@@ -235,9 +237,9 @@ function PlaceFields({
       <Field label={contactLabel} value={draft[contact]} onChangeText={(value) => onChange(contact, value)} error={errors[contact] ?? null} autoCapitalize="words" />
       <Field label={phoneLabel} value={draft[phone]} onChangeText={(value) => onChange(phone, value)} error={errors[phone] ?? null} keyboardType="phone-pad" />
       <Field label={`${emailLabel} (không bắt buộc)`} value={draft[email]} onChangeText={(value) => onChange(email, value)} error={errors[email] ?? null} keyboardType="email-address" autoComplete="email" />
-      <Field label={`${dateLabel} (năm-tháng-ngày)`} value={draft[date]} onChangeText={(value) => onChange(date, value)} error={errors[date] ?? null} placeholder="2026-10-30" keyboardType="numbers-and-punctuation" maxLength={10} />
-      <Field label={`${fromLabel} (giờ:phút)`} value={draft[from]} onChangeText={(value) => onChange(from, value)} error={errors[from] ?? null} placeholder="08:00" keyboardType="numbers-and-punctuation" maxLength={5} />
-      <Field label={`${toLabel} (giờ:phút)`} value={draft[to]} onChangeText={(value) => onChange(to, value)} error={errors[to] ?? null} placeholder="11:00" keyboardType="numbers-and-punctuation" maxLength={5} />
+      <DateTimeField label={dateLabel} mode="date" value={draft[date]} onChange={(value) => onChange(date, value)} error={errors[date] ?? null} minDate={minDate} />
+      <DateTimeField label={fromLabel} mode="time" value={draft[from]} onChange={(value) => onChange(from, value)} error={errors[from] ?? null} />
+      <DateTimeField label={toLabel} mode="time" value={draft[to]} onChange={(value) => onChange(to, value)} error={errors[to] ?? null} />
     </View>
   );
 }

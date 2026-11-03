@@ -72,6 +72,11 @@ const stepOf: Record<string, 1 | 2 | 3> = {
   deliveryTimeTo: 2,
 };
 
+function localToday(now = new Date()): string {
+  const two = (n: number) => String(n).padStart(2, "0");
+  return `${now.getFullYear()}-${two(now.getMonth() + 1)}-${two(now.getDate())}`;
+}
+
 function text(value: string, max: number): string | null {
   const trimmed = value.trim();
   if (trimmed.length === 0 || trimmed.length > max) return null;
@@ -150,7 +155,9 @@ export function validateOrder(draft: OrderDraft): { ok: true; body: PublishField
   if (!pickupContactName) fields.pickupContactName = "Nhập người bốc hàng.";
   if (!pickupPhone) fields.pickupPhone = "Nhập số điện thoại lấy hàng.";
   if (pickupEmail === undefined) fields.pickupEmail = "Email nhận thông báo chưa hợp lệ.";
+  const today = localToday();
   if (!pickupDate) fields.pickupDate = "Chọn ngày lấy hàng hợp lệ.";
+  else if (pickupDate < today) fields.pickupDate = "Ngày lấy hàng không được ở trong quá khứ.";
   if (!draft.pickupTimeFrom.trim()) fields.pickupTimeFrom = "Chọn giờ bắt đầu bốc hàng.";
   else if (!pickupTimeFrom) fields.pickupTimeFrom = "Giờ bắt đầu bốc hàng chưa hợp lệ.";
   if (!draft.pickupTimeTo.trim()) fields.pickupTimeTo = "Chọn giờ kết thúc bốc hàng.";
@@ -162,7 +169,8 @@ export function validateOrder(draft: OrderDraft): { ok: true; body: PublishField
   if (!deliveryPhone) fields.deliveryPhone = "Nhập số điện thoại giao hàng.";
   if (deliveryEmail === undefined) fields.deliveryEmail = "Email kho nhận chưa hợp lệ.";
   if (!deliveryDate) fields.deliveryDate = "Chọn ngày giao hàng hợp lệ.";
-  if (pickupDate && deliveryDate && deliveryDate < pickupDate) fields.deliveryDate = "Ngày giao muộn nhất không được trước ngày lấy hàng.";
+  else if (deliveryDate < today) fields.deliveryDate = "Ngày giao hàng không được ở trong quá khứ.";
+  if (pickupDate && deliveryDate && deliveryDate >= today && deliveryDate < pickupDate) fields.deliveryDate = "Ngày giao muộn nhất không được trước ngày lấy hàng.";
   if (!draft.deliveryTimeFrom.trim()) fields.deliveryTimeFrom = "Chọn giờ bắt đầu nhận hàng.";
   else if (!deliveryTimeFrom) fields.deliveryTimeFrom = "Giờ bắt đầu nhận hàng chưa hợp lệ.";
   if (!draft.deliveryTimeTo.trim()) fields.deliveryTimeTo = "Chọn giờ kết thúc nhận hàng.";
