@@ -14,6 +14,7 @@ import { toShipmentView, toShipmentViews } from "../shipments/assignmentView.js"
 import { toTrackingDto } from "../gps/trackingView.js";
 import { attachTimeline, shipmentEventUpdate } from "../shipments/shipmentEvents.js";
 import { attachReservedCargoImages, releaseCargoReservation, reserveCargoImages } from "../shipments/cargoImages.js";
+import { mineFilter, readMineQuery } from "../shipments/mineQuery.js";
 import { readPublishInput } from "../shipments/publishInput.js";
 import { orderNoticeBody, recordOrderNotice } from "../orders/notices.js";
 
@@ -92,8 +93,29 @@ shipmentRouter.get("/mine", async (request, response, next) => {
   try {
     const shipperId = request.authUser?.id;
     if (!shipperId) throw new HttpError(401, "unauthenticated", "Cần đăng nhập để tiếp tục.");
-    const shipments = await Shipment.find({ shipperId }).sort({ createdAt: -1 });
-    response.status(200).json({ shipments: await toShipmentViews(shipments) });
+    const parsed = readMineQuery(request.query as Record<string, unknown>);
+    const filter = mineFilter(shipperId, parsed);
+    const sort = { createdAt: -1, _id: -1 } as const;
+    if (!parsed.paging) {
+      const shipments = await Shipment.find(filter).sort(sort);
+      response.status(200).json({ shipments: await toShipmentViews(shipments), total: shipments.length });
+      return;
+    }
+    const { page, limit } = parsed.paging;
+    const [total, rows] = await Promise.all([
+      Shipment.countDocuments(filter),
+      Shipment.find(filter)
+        .sort(sort)
+        .skip((page - 1) * limit)
+        .limit(limit),
+    ]);
+    response.status(200).json({
+      shipments: await toShipmentViews(rows),
+      total,
+      page,
+      limit,
+      hasMore: page * limit < total,
+    });
   } catch (error) {
     next(error);
   }
