@@ -43,7 +43,8 @@
         {
           "photosPermission": "Coldi cần quyền truy cập ảnh để bạn đính kèm ảnh hàng hóa khi đăng đơn."
         }
-      ]
+      ],
+      "@react-native-community/datetimepicker"
     ]
   }
 }
