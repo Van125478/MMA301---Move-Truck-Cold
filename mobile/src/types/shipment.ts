@@ -52,6 +52,7 @@ export type Shipment = {
   temperatureLabel: string;
   vehicleRequirement: string;
   listedPriceVnd: number;
+  cargoImageIds: string[];
   status: ShipmentStatus;
   statusLabel: string;
   carrierId: string | null;
@@ -142,6 +143,14 @@ function parseTimeline(value: unknown): TimelineEvent[] {
   });
 }
 
+function parseImageIds(value: unknown): string[] {
+  if (!Array.isArray(value)) return [];
+  return value.flatMap((row) => {
+    const id = typeof row === "object" && row !== null ? text((row as Record<string, unknown>).id) : null;
+    return id ? [id] : [];
+  });
+}
+
 export function parseShipment(value: unknown): Shipment {
   const record = recordOf(value);
   const status = record.status;
@@ -175,6 +184,7 @@ export function parseShipment(value: unknown): Shipment {
     temperatureLabel: text(record.temperatureLabel) ?? temperatureGroup,
     vehicleRequirement: text(record.vehicleRequirement) ?? "",
     listedPriceVnd: price,
+    cargoImageIds: parseImageIds(record.cargoImages),
     status: status as ShipmentStatus,
     statusLabel: text(record.statusLabel) ?? status,
     carrierId: text(record.carrierId),
