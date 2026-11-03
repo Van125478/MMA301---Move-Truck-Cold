@@ -1,3 +1,4 @@
+import { randomBytes } from "node:crypto";
 /**
  * Visual QA for package screens on disposable database coldi_visual_qa.
  * Playwright loads from PLAYWRIGHT_PACKAGE, outside this repo.
@@ -20,7 +21,7 @@ const webPort = 5186;
 const webOrigin = `http://127.0.0.1:${webPort}`;
 const apiOrigin = `http://127.0.0.1:${apiPort}`;
 const mongoUri = `mongodb://127.0.0.1:27017/${databaseName}`;
-const password = "test-password-123";
+const password = process.env.QA_PASSWORD?.trim() || `qa-${randomBytes(12).toString("hex")}`;
 const shipperEmail = "shipper.visual@coldi.local";
 const carrierEmail = "carrier.visual@coldi.local";
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
@@ -347,7 +348,7 @@ async function main() {
     MONGODB_URI: mongoUri,
     FRONTEND_ORIGIN: webOrigin,
     NODE_ENV: "test",
-    AUTH_SECRET: "qa-package-visual-secret-not-for-production",
+    AUTH_SECRET: process.env.QA_AUTH_SECRET?.trim() || randomBytes(32).toString("hex"),
     APP_RUNTIME_MODE: "qa",
     PACKAGE_DEMO_SELF_ACTIVATION_ENABLED: "true",
     PACKAGE_DEMO_DEPLOYMENT_ID: "qa-package-visual",

@@ -1,3 +1,4 @@
+import { randomBytes } from "node:crypto";
 /**
  * Browser QA for package management on a disposable database.
  * Refuses any database whose name is not exactly coldi_package_qa.
@@ -21,7 +22,7 @@ const webPort = 5183;
 const webOrigin = `http://127.0.0.1:${webPort}`;
 const apiOrigin = `http://127.0.0.1:${apiPort}`;
 const mongoUri = `mongodb://127.0.0.1:27017/${databaseName}`;
-const password = "test-password-123";
+const password = process.env.QA_PASSWORD?.trim() || `qa-${randomBytes(12).toString("hex")}`;
 const shipperEmail = "shipper.e2e@coldi.local";
 const carrierEmail = "carrier.e2e@coldi.local";
 const driverEmail = "driver.e2e@coldi.local";
@@ -471,7 +472,7 @@ async function main() {
     MONGODB_URI: mongoUri,
     FRONTEND_ORIGIN: webOrigin,
     NODE_ENV: "test",
-    AUTH_SECRET: "qa-package-e2e-secret-not-for-production",
+    AUTH_SECRET: process.env.QA_AUTH_SECRET?.trim() || randomBytes(32).toString("hex"),
     APP_RUNTIME_MODE: "qa",
     PACKAGE_DEMO_SELF_ACTIVATION_ENABLED: "true",
     PACKAGE_DEMO_DEPLOYMENT_ID: "qa-package-e2e",
