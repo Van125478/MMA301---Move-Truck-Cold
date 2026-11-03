@@ -10,6 +10,8 @@ import {
   type TrackingView,
 } from "../../types/shipment";
 import { apiRequest } from "./client";
+import { apiOrigin } from "../../constants/config";
+import { readSessionToken } from "./sessionStore";
 import { authed } from "./authed";
 
 export type PublishFields = {
@@ -51,6 +53,27 @@ const listPath: Record<ListMode, string> = {
 
 export function listShipments(mode: ListMode): Promise<Shipment[]> {
   return authed<unknown>(listPath[mode]).then(parseShipmentList);
+}
+
+export type MineQuery = { statuses?: readonly string[]; temperatureGroup?: string; q?: string; page: number; limit: number };
+
+export type MinePage = { shipments: Shipment[]; total: number; hasMore: boolean };
+
+/** GET /api/shipments/mine có lọc và phân trang phía server (chỉ chủ hàng). */
+export function listMyShipments(query: MineQuery): Promise<MinePage> {
+  const params = new URLSearchParams({ page: String(query.page), limit: String(query.limit) });
+  if (query.statuses && query.statuses.length > 0) params.set("statuses", query.statuses.join(","));
+  if (query.temperatureGroup && query.temperatureGroup !== "ALL") params.set("temperatureGroup", query.temperatureGroup);
+  if (query.q?.trim()) params.set("q", query.q.trim());
+  return authed<unknown>(`${listPath.mine}?${params.toString()}`).then((body) => {
+    const shipments = parseShipmentList(body);
+    const record = body as { total?: unknown; hasMore?: unknown };
+    return {
+      shipments,
+      total: typeof record.total === "number" ? record.total : shipments.length,
+      hasMore: record.hasMore === true,
+    };
+  });
 }
 
 /** Sàn đơn đang tìm xe — cùng nguồn cho Landing và block sàn trên app chủ hàng. */
@@ -178,4 +201,11 @@ export async function uploadCargoImage(data: ArrayBuffer, contentType: string): 
   const id = body?.image?.id;
   if (typeof id !== "string" || id.length === 0) throw new Error("invalid_cargo_image_response");
   return id;
+}
+
+/** Ảnh hàng hóa cần đăng nhập: native gửi cookie phiên qua header, web dùng cookie của trình duyệt. */
+export async function cargoImageSource(id: string): Promise<{ uri: string; headers?: Record<string, string> }> {
+  const uri = `${apiOrigin}/api/cargo-images/${encodeURIComponent(id)}`;
+  const token = await readSessionToken();
+  return token ? { uri, headers: { Cookie: `coldi_session=${token}` } } : { uri };
 }

@@ -123,6 +123,7 @@ function snapshotShipment(item: ReturnType<typeof favoriteFrom>): Shipment {
     temperatureLabel: item.temperatureLabel,
     vehicleRequirement: "",
     listedPriceVnd: item.listedPriceVnd,
+    cargoImageIds: [],
     status: item.status,
     statusLabel: item.statusLabel || "Đã lưu",
     carrierId: null,

@@ -55,6 +55,8 @@ export function WorkspaceScreen() {
   const tabs = role === "CARRIER" ? carrierTabs : role === "DRIVER" ? driverTabs : role === "ADMIN" ? adminTabs : shipperTabs;
   const [tab, setTab] = useState(tabs[0]?.id ?? "account");
   const [detailId, setDetailId] = useState<string | null>(null);
+  const [refreshKey, setRefreshKey] = useState(0);
+  const refreshLists = () => setRefreshKey((value) => value + 1);
 
   function openDetail(id: string) {
     setDetailId(id);
@@ -73,7 +75,14 @@ export function WorkspaceScreen() {
         <View style={styles.shell}>
           {detailId ? null : <ScreenTopBar />}
           <View style={styles.body}>
-            {detailId ? <ShipmentDetailPanel shipmentId={detailId} onClose={() => setDetailId(null)} /> : null}
+            {detailId ? <ShipmentDetailPanel
+                shipmentId={detailId}
+                onClose={() => {
+                  setDetailId(null);
+                  refreshLists();
+                }}
+                onChanged={refreshLists}
+              /> : null}
             {role === "SHIPPER" ? (
               <Pane visible={!detailId && tab === "orders"}>
                 <OrderListScreen
@@ -87,6 +96,7 @@ export function WorkspaceScreen() {
                   emptyTitle="Chưa có đơn"
                   emptyBody="Bấm Tạo đơn mới để niêm yết nhu cầu vận chuyển lạnh."
                   onOpenDetail={openDetailProp}
+                  refreshKey={refreshKey}
                 />
               </Pane>
             ) : null}
@@ -95,6 +105,7 @@ export function WorkspaceScreen() {
                 <CreateOrderScreen
                   onCreated={(id) => {
                     setTab("orders");
+                    refreshLists();
                     openDetail(id);
                   }}
                 />
@@ -109,6 +120,7 @@ export function WorkspaceScreen() {
                   emptyTitle="Chưa có chuyến đang mở"
                   emptyBody="Khi chủ hàng đăng đơn, chuyến hiện ở đây."
                   onOpenDetail={openDetailProp}
+                  refreshKey={refreshKey}
                 />
               </Pane>
             ) : null}
@@ -121,6 +133,7 @@ export function WorkspaceScreen() {
                   emptyTitle="Chưa nhận chuyến"
                   emptyBody="Vào sàn chuyến để nhận đơn đang tìm xe."
                   onOpenDetail={openDetailProp}
+                  refreshKey={refreshKey}
                 />
               </Pane>
             ) : null}
@@ -133,6 +146,7 @@ export function WorkspaceScreen() {
                   emptyTitle="Chưa có chuyến"
                   emptyBody="Khi nhà xe phân công xe và tài xế, chuyến hiện ở đây."
                   onOpenDetail={openDetailProp}
+                  refreshKey={refreshKey}
                 />
               </Pane>
             ) : null}
