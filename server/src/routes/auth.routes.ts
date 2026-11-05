@@ -1,5 +1,6 @@
 import { Router } from "express";
 import { clearSessionCookie, setSessionCookie } from "../auth/cookies.js";
+import { clearLoginFailures, loginThrottleDecision, recordLoginFailure } from "../auth/loginThrottle.js";
 import { assertAcceptablePassword, hashPassword, verifyPassword } from "../auth/password.js";
 import { isResetEmail, issuePasswordReset, normalizeResetEmail, resetPasswordWithCode } from "../auth/passwordReset.js";
 import { signSessionToken } from "../auth/sessionToken.js";
@@ -30,14 +31,19 @@ authRouter.post("/login", requireTrustedOrigin, async (request, response, next) 
     if (password.length > 72) {
       throw new HttpError(400, "invalid_request", "Mật khẩu không hợp lệ.");
     }
+    if (process.env.NODE_ENV === "production" && loginThrottleDecision(identifier, Date.now()) === "block") {
+      throw new HttpError(429, "login_throttled", "Đăng nhập sai quá nhiều lần. Thử lại sau ít phút.");
+    }
 
     const user = identifier.includes("@")
       ? await User.findOne({ email: identifier })
       : await User.findOne({ username: identifier, role: "DRIVER" });
     const matches = user ? await verifyPassword(password, user.passwordHash) : false;
     if (!user || !matches) {
+      if (process.env.NODE_ENV === "production") recordLoginFailure(identifier, Date.now());
       throw new HttpError(401, "invalid_credentials", INVALID_CREDENTIALS);
     }
+    if (process.env.NODE_ENV === "production") clearLoginFailures(identifier);
     if (user.accountStatus === "LOCKED") {
       throw new HttpError(403, "account_locked", "Tài khoản đã bị khóa.");
     }

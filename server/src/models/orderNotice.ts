@@ -1,6 +1,6 @@
 import { Schema, model } from "mongoose";
 
-export const orderNoticeKinds = ["PUBLISHED", "CLAIMED", "ASSIGNED"] as const;
+export const orderNoticeKinds = ["PUBLISHED", "CLAIMED", "ASSIGNED", "FREIGHT_RECORDED", "FREIGHT_CONFIRMED"] as const;
 
 export type OrderNoticeKind = (typeof orderNoticeKinds)[number];
 

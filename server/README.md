@@ -1,6 +1,6 @@
 # COLDI API
 
-API Node.js cho bản team testing trên máy local. Không phải production. Không phải MVP đã hoàn thành. Module gói có danh mục, quyền gói và kích hoạt Demo/QA. Hoa hồng có snapshot và sổ cái mô phỏng, chỉ khi guard Demo/QA bật. Báo cáo sự cố đã có mã. Giá dầu thô thế giới có API đọc và worker đồng bộ, tắt cho đến khi có khóa EIA. Chưa có thanh toán thật.
+API Node.js cho bản team testing trên máy local. Không phải production. Không phải MVP đã hoàn thành. Module gói có danh mục, quyền gói và kích hoạt Demo/QA. Hoa hồng có snapshot và sổ cái mô phỏng, chỉ khi guard Demo/QA bật. Báo cáo sự cố đã có mã. Giá dầu thô thế giới có API đọc và worker đồng bộ, tắt cho đến khi có khóa EIA. Sau khi giao, chủ hàng ghi nhận cước đã trả cho nhà xe và nhà xe xác nhận đã nhận. Coldi không thu hộ và không có cổng thanh toán.
 
 Người mới cài máy theo [hướng dẫn nhóm](../docs/team-testing/TEAM_TESTING_GUIDE.md). File này giải thích API. SHA hiện tại lấy bằng `git rev-parse HEAD` sau `git pull`. Đừng dùng SHA cũ trong mục lịch sử làm HEAD.
 
@@ -12,7 +12,7 @@ Cookie phiên tên `coldi_session`. Chủ hàng đăng đơn. Nhà xe tìm đơn
 - npm
 - MongoDB tại URI trong `.env`
 
-Docker không bắt buộc. MongoDB sẵn trên `127.0.0.1:27017` là đủ. Nếu dùng Docker, file `docker-compose.yml` chạy image `mongo:7`, cổng chỉ `127.0.0.1:27017`, volume `coldi-mongo`. Đừng bật Docker khi cổng 27017 đã có MongoDB. `docker compose stop` tắt container và giữ volume. Hướng dẫn này không bảo xóa volume.
+Docker không bắt buộc. MongoDB sẵn trên `127.0.0.1:27017` là đủ. Nếu dùng Docker, file `docker-compose.yml` chạy image `mongo:7`, cổng chỉ `127.0.0.1:27017`, volume `coldi-mongo`. Đừng bật Docker khi cổng 27017 đã có MongoDB. `docker compose stop` tắt container và giữ volume. Profile `api` chạy thêm API; cách bật nằm ở [DEPLOY.md](../DEPLOY.md). Hướng dẫn này không bảo xóa volume.
 
 ## Cài và chạy
 
@@ -120,7 +120,7 @@ Sai email hoặc sai mật khẩu: 401, câu `Email, tên đăng nhập hoặc m
 
 Bốn email gợi ý: `shipper.demo@coldi.local`, `carrier.demo@coldi.local`, `driver.demo@coldi.local`, `admin.demo@coldi.local`. Mật khẩu chỉ ở `.env`.
 
-Chưa có giới hạn số lần đăng nhập. Chưa đủ cho production.
+Chưa đủ cho production. Khi `NODE_ENV=production`, cùng một email hoặc tên đăng nhập đăng nhập sai quá 8 lần trong 15 phút thì bị chặn, mã `login_throttled`. Bản local và test không bật giới hạn này. Cookie `Secure` cũng chỉ bật khi `NODE_ENV=production`, nên host công khai cần HTTPS.
 
 ## Đơn và nhà xe
 
@@ -154,15 +154,23 @@ Chat nhà xe: `POST /api/carrier/conversations/by-shipment/:shipmentId` mở cu�
 | `POST` | `/api/driver/shipments/:id/location` | Gửi điểm chỉ khi đang `IN_TRANSIT` và đúng tài xế |
 | `GET` | `/api/driver/shipments/:id/location` | Tài xế đọc điểm của chuyến mình |
 
-Xác nhận lần hai không kéo trạng thái lùi. Giao không sang `COMPLETED` và không ghi thanh toán. GPS không đổi trạng thái và không thêm mốc timeline.
+Xác nhận lần hai không kéo trạng thái lùi. Giao không sang `COMPLETED` và không tự ghi thanh toán. GPS không đổi trạng thái và không thêm mốc timeline.
 
 Sự kiện timeline: `PUBLISHED`, `CLAIMED`, `ASSIGNED`, `PICKUP_CONFIRMED`, `DELIVERY_CONFIRMED`, `CANCELLED`. `ASSIGNED` mới lưu tên xe và tên tài xế lúc gán. Sự kiện cũ không có hai trường đó vẫn đọc được và dùng tên hiện tại, nên câu đó không phải ảnh lịch sử bất biến.
 
 ADMIN không có router nghiệp vụ. Khách 401. Sai vai 403 trên route yêu cầu vai.
 
+## Thanh toán cước
+
+`GET /api/freight-payments/:shipmentId` cho chủ hàng, nhà xe hoặc tài xế của đúng đơn. Người khác nhận 404. Chưa ghi nhận thì `status` là `UNPAID`.
+
+`POST /api/freight-payments/:shipmentId` chỉ chủ hàng, chỉ khi đơn đã `DELIVERY_CONFIRMED` hoặc `COMPLETED`. Body chuyển khoản là `{ "method": "BANK_TRANSFER", "reference": "FT123456" }`. Tiền mặt là `{ "method": "CASH" }`. Số tiền lấy từ `listedPriceVnd`, client không gửi số tiền. `platformCollected` luôn `false`.
+
+`POST /api/freight-payments/:shipmentId/confirm` với `{}` chỉ nhà xe của đơn, chuyển `RECORDED` sang `CONFIRMED`. Ghi nhận và xác nhận đều gửi một thông báo cho bên còn lại. Đường `/api/payments` không tồn tại.
+
 ## Việc còn mở
 
-Một nhà xe nhận một đơn. Nhận chuyến không gán xe. Chat không giữ chỗ. Tile Mapbox chưa được chứng minh khi render thật. Thời gian lưu tin và quyền đọc của nhà xe thua claim chưa chốt. Không có tenant tổ chức. Audit ghi sau khi nghiệp vụ thành công và có thể mất nếu tiến trình dừng trước insert. Không có thanh toán thật.
+Một nhà xe nhận một đơn. Nhận chuyến không gán xe. Chat không giữ chỗ. Tile Mapbox chưa được chứng minh khi render thật. Thời gian lưu tin và quyền đọc của nhà xe thua claim chưa chốt. Không có tenant tổ chức. Audit ghi sau khi nghiệp vụ thành công và có thể mất nếu tiến trình dừng trước insert. Không có cổng thanh toán. Ghi nhận cước chỉ là biên nhận giữa chủ hàng và nhà xe.
 
 Với bài mobile: hủy đơn sau `MATCHED` vẫn đóng. Quên mật khẩu khi `NODE_ENV=production` không cấp mã vì chưa có máy gửi email.
 

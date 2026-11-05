@@ -63,5 +63,6 @@ Chuông mở màn **Thông báo**. Đăng đơn thành công, đơn được nh�
 | Tài xế | `GET /api/driver/shipments`, `POST .../pickup`, `POST .../delivery`, `GET` và `POST .../location` |
 | Đánh giá | `GET /api/shipment-reviews/:id`, `POST /api/mobile/shipments/:id/reviews` |
 | Thông báo đơn và sự cố | `GET /api/notices`, `GET /api/notices/unread-count`, `POST /api/notices/:id/read` |
+| Thanh toán cước | `GET /api/freight-payments/:id`, `POST /api/freight-payments/:id`, `POST /api/freight-payments/:id/confirm` |
 
 Hủy sau khi nhà xe đã nhận chưa mở. Sửa đơn chưa có API. Quản trị chưa có khu vận hành trên app.

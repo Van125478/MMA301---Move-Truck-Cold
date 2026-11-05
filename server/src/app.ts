@@ -23,6 +23,7 @@ import { mobileRouter } from "./routes/mobile.routes.js";
 import { marketplaceBrowseRouter } from "./routes/marketplaceBrowse.routes.js";
 import { orderNoticeRouter } from "./routes/orderNotice.routes.js";
 import { shipmentReviewRouter } from "./routes/shipmentReview.routes.js";
+import { freightPaymentRouter } from "./routes/freightPayment.routes.js";
 import { shipmentRouter } from "./routes/shipment.routes.js";
 
 export function createApp() {
@@ -48,6 +49,7 @@ export function createApp() {
   app.use("/api/cargo-images", cargoImageRouter);
   app.use("/api/incident-evidence", incidentEvidenceRouter);
   app.use("/api/shipments", shipmentRouter);
+  app.use("/api/freight-payments", freightPaymentRouter);
   app.use("/api/mobile", mobileRouter);
   app.use("/api/commission", commissionRouter);
   app.use("/api/shipments", shipmentChatRouter);

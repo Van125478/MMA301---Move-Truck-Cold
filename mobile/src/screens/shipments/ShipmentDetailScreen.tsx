@@ -30,6 +30,7 @@ import { readDeviceFix } from "../../services/location/deviceFix";
 import type { FleetDriver, FleetVehicle, Shipment, TrackingView } from "../../types/shipment";
 import { CargoGallery } from "../../components/shipment/CargoGallery";
 import { ReviewSection } from "../../components/shipment/ReviewSection";
+import { FreightPaymentSection } from "../../components/shipment/FreightPaymentSection";
 import { cargoHeroImage } from "../../utils/cargoHeroImage";
 import { formatVnd, formatWhen, formatWindow } from "../../utils/format";
 
@@ -217,7 +218,7 @@ function ShipmentDetailBody({
                 <Text maxFontSizeMultiplier={1.4} style={[styles.priceLabel, { color: colors.muted }]}>
                   Cước niêm yết
                 </Text>
-                <Text style={[styles.caption, { color: colors.muted }]}>Chưa phải thanh toán trên app.</Text>
+                <Text style={[styles.caption, { color: colors.muted }]}>Cước trả cho nhà xe. Coldi không thu hộ.</Text>
               </View>
               <Text maxFontSizeMultiplier={1.3} numberOfLines={1} style={[styles.price, { color: colors.primary }]}>
                 {formatVnd(shipment.listedPriceVnd)}
@@ -247,6 +248,14 @@ function ShipmentDetailBody({
           shipmentId={shipment.id}
           canWrite={role === "SHIPPER" && (shipment.status === "DELIVERY_CONFIRMED" || shipment.status === "COMPLETED") && shipment.carrierId != null}
         />
+
+        {role === "SHIPPER" || role === "CARRIER" || role === "DRIVER" ? (
+          <FreightPaymentSection
+            shipmentId={shipment.id}
+            role={role}
+            delivered={shipment.status === "DELIVERY_CONFIRMED" || shipment.status === "COMPLETED"}
+          />
+        ) : null}
 
         {shipment.timeline.length > 0 ? (
           <Section title="Mốc đã ghi">

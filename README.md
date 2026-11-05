@@ -13,6 +13,7 @@ Người mới làm đúng thứ tự: lấy mã, nối MongoDB, chạy API, r�
 3. Nhà xe gán một xe đang rảnh và một tài xế của mình. Một xe chỉ giữ một chuyến chưa xong.
 4. Tài xế xác nhận đã lấy hàng, gửi vị trí khi đang chở, rồi xác nhận đã giao.
 5. Xác nhận giao chỉ ghi nhận hàng đã tới. Bước đó không thu tiền và không xuất hóa đơn.
+6. Sau khi giao, chủ hàng ghi nhận đã trả cước cho nhà xe bằng chuyển khoản hoặc tiền mặt. Nhà xe xác nhận đã nhận. Coldi không thu hộ và không gọi cổng thanh toán.
 
 Bốn vai: chủ hàng, nhà xe, tài xế, quản trị. Một tài khoản một vai. Tài xế do nhà xe tạo, không tự vào sàn nhận chuyến.
 
@@ -32,8 +33,9 @@ Các đường dưới đây đã có trên API. Hủy đơn chỉ khi trạng t
 | Sàn và nhận chuyến | `GET /api/carrier/shipments`, `POST /api/carrier/shipments/:id/claim` | CARRIER |
 | Chuyến đã nhận, gán xe và tài xế | `GET /api/carrier/shipments/claimed`, `POST /api/carrier/shipments/:id/assign` | CARRIER |
 | Chuyến của tài xế, lấy hàng, giao hàng | `GET /api/driver/shipments`, `POST /api/driver/shipments/:id/pickup`, `POST /api/driver/shipments/:id/delivery` | DRIVER |
+| Ghi nhận và xác nhận cước | `GET /api/freight-payments/:shipmentId`, `POST /api/freight-payments/:shipmentId`, `POST /api/freight-payments/:shipmentId/confirm` | Chủ hàng ghi nhận sau khi giao. Nhà xe xác nhận đã nhận. |
 
-Chi tiết màn hình người 1 nằm ở [mobile/README.md](mobile/README.md). Cách bấm nghiệm thu nằm ở [mobile/NGHIEM_THU.md](mobile/NGHIEM_THU.md).
+Chi tiết màn hình người 1 nằm ở [mobile/README.md](mobile/README.md). Cách bấm nghiệm thu nằm ở [mobile/NGHIEM_THU.md](mobile/NGHIEM_THU.md). Cách đưa API lên máy khác nằm ở [DEPLOY.md](DEPLOY.md).
 
 ## Thư mục
 

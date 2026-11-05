@@ -9,7 +9,7 @@ import {
   type Shipment,
   type TrackingView,
 } from "../../types/shipment";
-import { apiRequest } from "./client";
+import { ApiError, apiRequest } from "./client";
 import { apiOrigin } from "../../constants/config";
 import { readSessionToken } from "./sessionStore";
 import { authed } from "./authed";
@@ -116,6 +116,60 @@ export function confirmPickup(id: string): Promise<Shipment> {
 
 export function confirmDelivery(id: string): Promise<Shipment> {
   return authed<unknown>(`/api/driver/shipments/${id}/delivery`, { method: "POST", body: {} }).then(parseShipmentBody);
+}
+
+export type FreightMethod = "BANK_TRANSFER" | "CASH";
+
+export type FreightPayment = {
+  status: "UNPAID" | "RECORDED" | "CONFIRMED";
+  amountVnd: number;
+  method: FreightMethod | null;
+  methodLabel: string | null;
+  reference: string | null;
+  recordedAt: string | null;
+  confirmedAt: string | null;
+  platformCollected: false;
+  label: string;
+};
+
+const invalidPayment = new ApiError(0, "invalid_response", "Máy chủ trả về thanh toán không đúng cấu trúc.");
+
+function parseFreightPayment(body: unknown): FreightPayment {
+  if (typeof body !== "object" || body === null || !("payment" in body)) throw invalidPayment;
+  const payment = (body as { payment?: unknown }).payment;
+  if (typeof payment !== "object" || payment === null) throw invalidPayment;
+  const row = payment as Record<string, unknown>;
+  const status = row.status;
+  if (status !== "UNPAID" && status !== "RECORDED" && status !== "CONFIRMED") throw invalidPayment;
+  if (typeof row.amountVnd !== "number" || !Number.isInteger(row.amountVnd)) throw invalidPayment;
+  if (row.platformCollected !== false) throw invalidPayment;
+  if (typeof row.label !== "string") throw invalidPayment;
+  const method = row.method === null ? null : row.method === "BANK_TRANSFER" || row.method === "CASH" ? row.method : null;
+  if (row.method !== null && method === null) throw invalidPayment;
+  return {
+    status,
+    amountVnd: row.amountVnd,
+    method,
+    methodLabel: typeof row.methodLabel === "string" ? row.methodLabel : null,
+    reference: typeof row.reference === "string" ? row.reference : null,
+    recordedAt: typeof row.recordedAt === "string" ? row.recordedAt : null,
+    confirmedAt: typeof row.confirmedAt === "string" ? row.confirmedAt : null,
+    platformCollected: false,
+    label: row.label,
+  };
+}
+
+export function loadFreightPayment(id: string): Promise<FreightPayment> {
+  return authed<unknown>(`/api/freight-payments/${id}`).then(parseFreightPayment);
+}
+
+export function recordFreightPayment(id: string, method: FreightMethod, reference: string | null): Promise<FreightPayment> {
+  const body = method === "BANK_TRANSFER" ? { method, reference } : { method };
+  return authed<unknown>(`/api/freight-payments/${id}`, { method: "POST", body }).then(parseFreightPayment);
+}
+
+export function confirmFreightPayment(id: string): Promise<FreightPayment> {
+  return authed<unknown>(`/api/freight-payments/${id}/confirm`, { method: "POST", body: {} }).then(parseFreightPayment);
 }
 
 export function loadTracking(role: UserRole, id: string): Promise<TrackingView | null> {

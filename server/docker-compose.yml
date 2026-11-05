@@ -6,5 +6,19 @@ services:
     volumes:
       - coldi-mongo:/data/db
 
+  api:
+    profiles: ["api"]
+    build: .
+    ports:
+      - "127.0.0.1:4000:4000"
+    environment:
+      PORT: "4000"
+      MONGODB_URI: mongodb://mongodb:27017/move_truck
+      FRONTEND_ORIGIN: ${FRONTEND_ORIGIN:-http://127.0.0.1:5173}
+      NODE_ENV: ${NODE_ENV:-development}
+      AUTH_SECRET: ${AUTH_SECRET:-}
+    depends_on:
+      - mongodb
+
 volumes:
   coldi-mongo:

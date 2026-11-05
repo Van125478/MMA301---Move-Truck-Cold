@@ -30,6 +30,7 @@ npm run seed:shipments
 7. Bấm trái tim. Sang tab **Yêu thích**, đơn đó có một dòng. **Xóa tất cả yêu thích** làm trống danh sách sau khi xác nhận.
 8. Trên chi tiết, bấm **Hủy đơn đang tìm xe** khi đơn còn đang tìm xe.
 9. Mở đơn **Sữa chua lạnh đã giao** nếu đã seed. Khối **Đánh giá** có sao, nhóm theo số sao, và nhận xét.
+10. Trên đơn đó, khối **Thanh toán cước** hiện cước niêm yết. Chọn **Chuyển khoản**, nhập mã giao dịch như `FT123456`, bấm **Ghi nhận đã thanh toán**, rồi xác nhận. Dòng trạng thái thành **Chủ hàng đã ghi nhận thanh toán. Chờ nhà xe xác nhận.**
 
 ## 3. Nhà xe
 
@@ -38,6 +39,7 @@ npm run seed:shipments
 3. Mở một đơn, bấm **Nhận chuyến**, xác nhận.
 4. Tab **Đã nhận**, mở chuyến đó. Chọn xe đang rảnh và tài xế, bấm **Phân công**.
 5. Chuông của nhà xe có **Bạn đã nhận chuyến**. Chuông chủ hàng có **Đơn đã được nhận**. Bấm dòng mở đúng đơn.
+6. Mở đơn **Sữa chua lạnh đã giao** nếu chủ hàng vừa ghi nhận cước. Bấm **Xác nhận đã nhận tiền**. Dòng trạng thái thành **Nhà xe đã xác nhận đã nhận tiền.** Chuông chủ hàng có **Nhà xe đã xác nhận đã nhận tiền**.
 
 ## 4. Tài xế
 
